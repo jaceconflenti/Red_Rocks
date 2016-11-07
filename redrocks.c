@@ -30,13 +30,14 @@ int move = 1;      //  Move light
 double Ex = 1;     //  X-coordinate of eye
 double Ey = 1;     //  Y-coordinate of eye
 double Ez = 1;     //  Z-coordinate of eye
+unsigned int rock[4];  //  Rock textures
 
 SDL_Surface* screen;
 
 //  Curved rectangular prism 
 static void row(double x, double y, double z, double dx, double dy, double dz, double th)
 {
-	const double d = 5;  //  Degress per step
+	const double d = 2.5;  //  Degress per step
 	const double slices = 180.0 / d;
 
 	//  Save transformation
@@ -47,25 +48,36 @@ static void row(double x, double y, double z, double dx, double dy, double dz, d
 	glScaled(dx,dy,dz);
 
 	glColor3f(1.0,0.9,0.65);
-
+	glBindTexture(GL_TEXTURE_2D, rock[1]);  //  Sandstone 128
+	
 	//  Front
-	glBegin(GL_QUAD_STRIP);
 	for (int j=0; j<=slices; j++)
 	{
+		glBegin(GL_QUADS);
 		glNormal3d(-Cos(j*d), -Sin(j*d), 0);
-		glVertex3d(Cos(j*d),Sin(j*d)-1,-1);
-		glVertex3d(Cos(j*d),Sin(j*d)-1,+1);
+		glTexCoord2f(0,0); glVertex3d(Cos(j*d),Sin(j*d)-1,-1);
+		glNormal3d(-Cos((j+1)*d), -Sin((j+1)*d), 0);
+		glTexCoord2f(1,0); glVertex3d(Cos((j+1)*d),Sin((j+1)*d)-1,-1);
+		glNormal3d(-Cos((j+1)*d), -Sin((j+1)*d), 0);
+		glTexCoord2f(1,1); glVertex3d(Cos((j+1)*d),Sin((j+1)*d)-1,+1);
+		glNormal3d(-Cos(j*d), -Sin(j*d), 0);
+		glTexCoord2f(0,1); glVertex3d(Cos(j*d),Sin(j*d)-1,+1);
+		glEnd();
 	}
-	glEnd();
 	//  Back
-	glBegin(GL_QUAD_STRIP);
 	for (int j=0; j<=slices; j++)
 	{
+		glBegin(GL_QUADS);
 		glNormal3d(Cos(j*d), Sin(j*d), 0);
-		glVertex3d(Cos(j*d),Sin(j*d)+1,-1);
-		glVertex3d(Cos(j*d),Sin(j*d)+1,+1);
+		glTexCoord2f(0,0); glVertex3d(Cos(j*d),Sin(j*d)+1,-1);
+		glNormal3d(Cos((j+1)*d), Sin((j+1)*d), 0);
+		glTexCoord2f(1,0); glVertex3d(Cos((j+1)*d),Sin((j+1)*d)+1,-1);
+		glNormal3d(Cos((j+1)*d), Sin((j+1)*d), 0);
+		glTexCoord2f(1,1); glVertex3d(Cos((j+1)*d),Sin((j+1)*d)+1,+1);
+		glNormal3d(Cos(j*d), Sin(j*d), 0);
+		glTexCoord2f(0,1); glVertex3d(Cos(j*d),Sin(j*d)+1,+1);
+		glEnd();
 	}
-	glEnd();
 	//  Right
 	glBegin(GL_QUADS);
 	glNormal3f(+1, 0, 0);
@@ -82,26 +94,48 @@ static void row(double x, double y, double z, double dx, double dy, double dz, d
 	glTexCoord2f(1,1); glVertex3f(-1,+1,+1);
 	glTexCoord2f(0,1); glVertex3f(-1,+1,-1);
 	glEnd();
+
+	glBindTexture(GL_TEXTURE_2D, rock[3]);  //  Concrete     
+
 	//  Top
-	glBegin(GL_QUAD_STRIP);
 	glNormal3f(0, 0, +1);
 	for (int j=0; j<=slices; j++)
-	{
-		glVertex3d(Cos(j*d),Sin(j*d)+1,+1);
-		glVertex3d(Cos(j*d),Sin(j*d)-1,+1);
+	{		
+		glBegin(GL_QUADS);
+		glTexCoord2f(0,0); glVertex3d(Cos(j*d),Sin(j*d)-1,+1);
+		glTexCoord2f(1,0); glVertex3d(Cos((j+1)*d),Sin((j+1)*d)-1,+1);
+		glTexCoord2f(1,1); glVertex3d(Cos((j+1)*d),Sin((j+1)*d)+1,+1);
+		glTexCoord2f(0,1); glVertex3d(Cos(j*d),Sin(j*d)+1,+1);
+		glEnd();
 	}
-	glEnd();
 	//  Bottom
-	glBegin(GL_QUAD_STRIP);
 	glNormal3f(0, 0, -1);
 	for (int j=0; j<=slices; j++)
 	{
-		glVertex3d(Cos(j*d),Sin(j*d)+1,-1);
-		glVertex3d(Cos(j*d),Sin(j*d)-1,-1);
+		glBegin(GL_QUADS);
+		glTexCoord2f(0,0); glVertex3d(Cos(j*d),Sin(j*d)-1,+1);
+		glTexCoord2f(1,0); glVertex3d(Cos((j+1)*d),Sin((j+1)*d)-1,+1);
+		glTexCoord2f(1,1); glVertex3d(Cos((j+1)*d),Sin((j+1)*d)+1,+1);
+		glTexCoord2f(0,1); glVertex3d(Cos(j*d),Sin(j*d)+1,+1);
+		glEnd();
 	}
-	glEnd();
 
 	//  Undo transofrmations
+	glPopMatrix();
+}
+
+static void stands(int num, double x, double y, double z, double dx, double dy, double dz, double th)
+{
+	//  Save transformations
+	glPushMatrix();
+	//  Offset
+	glRotated(th,0,0,1);
+
+	for (int i = 0; i < num; i++)
+	{ 
+		row(x,y+(i*dy*2),z+(i*dz*2),dx,dy,dz,th);
+	}
+	//  Undo transformations
 	glPopMatrix();
 }
 
@@ -116,6 +150,7 @@ static void stair(double x, double y, double z, double dx, double dy, double dz,
 	glScaled(dx,dy,dz);
 
 	glColor3f(1.0,0.45,0.0);
+	glBindTexture(GL_TEXTURE_2D, rock[3]);  //  Concrete
 
 	//  Top
 	glBegin(GL_QUADS);
@@ -133,6 +168,9 @@ static void stair(double x, double y, double z, double dx, double dy, double dz,
 	glTexCoord2f(1,1); glVertex3f(-1,+1,-1);
 	glTexCoord2f(0,1); glVertex3f(+1,+1,-1);
 	glEnd();
+
+	glBindTexture(GL_TEXTURE_2D, rock[2]);  //  Sandstone 256
+
 	//  Right
 	glBegin(GL_QUADS);
 	glNormal3f(+1, 0, 0);
@@ -194,21 +232,6 @@ static void bigStairs(int num, double x, double y, double z, double dx, double d
 	for (int i = 0; i < num; i++)
 	{ 
 		stair(x,y+(i*dy*4),z+(i*dz*4),dx,dy,dz,th);
-	}
-	//  Undo transformations
-	glPopMatrix();
-}
-
-static void stands(int num, double x, double y, double z, double dx, double dy, double dz, double th)
-{
-	//  Save transformations
-	glPushMatrix();
-	//  Offset
-	glRotated(th,0,0,1);
-
-	for (int i = 0; i < num; i++)
-	{ 
-		row(x,y+(i*dy*2),z+(i*dz*2),dx,dy,dz,th);
 	}
 	//  Undo transformations
 	glPopMatrix();
@@ -442,16 +465,20 @@ void display()
 		glDisable(GL_LIGHTING);
 	}
 
-	//  Draw scene
-	stairs(120, -80,0,-.5, 5,5,.5, 0);
-	stairs(120, 80,0,-.5, 5,5,.5, 0);
-	bigStairs(15, -95,5,1, 10,10,2, 0);
-	bigStairs(15, 95,5,1, 10,10,2, 0);
-	stands(60, 0,0,0, 75,5,1, 0);
-	
+	//  Enable textures
+	glEnable(GL_TEXTURE_2D);
+	glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
 
-	//  Turn lighting off
+	//  Draw scene
+	stairs(120, -155,0,-.5, 5,5,.5, 0);
+	stairs(120, 155,0,-.5, 5,5,.5, 0);
+	bigStairs(15, -170,5,1, 10,10,2, 0);
+	bigStairs(15, 170,5,1, 10,10,2, 0);
+	stands(60, 0,0,0, 150,5,1, 0);
+
+	//  Turn lighting and textures off
 	glDisable(GL_LIGHTING);
+	glDisable(GL_TEXTURE_2D);
 
 	//  Draw axes
 	glColor3f(1,1,1);
@@ -511,11 +538,14 @@ int main(int argc, char *argv[])
 	//  Set screen size
 	reshape(screen->w,screen->h);
 
-	/*
+	
 	//  Load textures
-	//LoadTexBMP("brick.bmp");
+	rock[0] = LoadTexBMP("brick.bmp");
+	rock[1] = LoadTexBMP("sandstone.bmp");
+	rock[2] = LoadTexBMP("sandstone2.bmp");
+	rock[3] = LoadTexBMP("concrete.bmp");
 
-	//  Initialize audio
+	/*  Initialize audio
 	if (Mix_OpenAudio(44100,AUDIO_S16SYS,2,4096)) Fatal("Cannot initialize audio\n");
 	//  Load "The Wall"
 	music = Mix_LoadMUS("thewall.ogg");
