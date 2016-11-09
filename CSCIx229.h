@@ -18,8 +18,9 @@
 #include <SDL/SDL_mixer.h>
 #include <SDL/SDL_ttf.h>
 
-#define Cos(th) cos(3.1415926/180*(th))
-#define Sin(th) sin(3.1415926/180*(th))
+#define PI 3.1415926
+#define Cos(th) cos(PI/180*(th))
+#define Sin(th) sin(PI/180*(th))
 
 #ifdef __cplusplus
 extern "C" {

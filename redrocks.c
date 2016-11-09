@@ -22,7 +22,7 @@ double asp = 1;    //  Aspect ratio
 double dim = AXES; //  'Radius' of world
 int axes = 1;      //  Display axes
 int th = 0;        //  Azimuth of view angle
-int ph = 0;        //  Elevation of view angle
+int ph = 15;       //  Elevation of view angle
 int zh = 0;        //  Azimouth of light
 int light = 1;     //  Lighting
 double yl = 0.0;   //  Elevation of light
@@ -30,7 +30,12 @@ int move = 1;      //  Move light
 double Ex = 1;     //  X-coordinate of eye
 double Ey = 1;     //  Y-coordinate of eye
 double Ez = 1;     //  Z-coordinate of eye
-unsigned int rock[4];  //  Rock textures
+double Ox = 0;	   //  Look-at x
+double Oy = 0;	   //  Look-at y
+double Oz = 0;	   //  Look-at z
+int X,Y;           //  Last mouse coordinates
+int mouse = 0;      //  Move mode    
+unsigned int rock[3];  //  Rock textures
 
 SDL_Surface* screen;
 
@@ -47,8 +52,8 @@ static void row(double x, double y, double z, double dx, double dy, double dz, d
 	//glRotated(th,0,0,1);
 	glScaled(dx,dy,dz);
 
-	glColor3f(1.0,0.9,0.65);
-	glBindTexture(GL_TEXTURE_2D, rock[1]);  //  Sandstone 128
+	glColor3f(1.0,0.86,0.73);
+	glBindTexture(GL_TEXTURE_2D, rock[0]);  //  Brick
 	
 	//  Front
 	for (int j=0; j<=slices; j++)
@@ -81,21 +86,21 @@ static void row(double x, double y, double z, double dx, double dy, double dz, d
 	//  Right
 	glBegin(GL_QUADS);
 	glNormal3f(+1, 0, 0);
-	glTexCoord2f(0,0); glVertex3f(+1,-1,+1);
-	glTexCoord2f(1,0); glVertex3f(+1,-1,-1);
-	glTexCoord2f(1,1); glVertex3f(+1,+1,-1);
-	glTexCoord2f(0,1); glVertex3f(+1,+1,+1);
+	glTexCoord2f(1,0); glVertex3f(+1,-1,+1);
+	glTexCoord2f(1,1); glVertex3f(+1,-1,-1);
+	glTexCoord2f(0,1); glVertex3f(+1,+1,-1);
+	glTexCoord2f(0,0); glVertex3f(+1,+1,+1);
 	glEnd();
 	//  Left
 	glBegin(GL_QUADS);
 	glNormal3f(-1, 0, 0);
-	glTexCoord2f(0,0); glVertex3f(-1,-1,-1);
-	glTexCoord2f(1,0); glVertex3f(-1,-1,+1);
-	glTexCoord2f(1,1); glVertex3f(-1,+1,+1);
-	glTexCoord2f(0,1); glVertex3f(-1,+1,-1);
+	glTexCoord2f(1,0); glVertex3f(-1,-1,-1);
+	glTexCoord2f(1,1); glVertex3f(-1,-1,+1);
+	glTexCoord2f(0,1); glVertex3f(-1,+1,+1);
+	glTexCoord2f(0,0); glVertex3f(-1,+1,-1);
 	glEnd();
 
-	glBindTexture(GL_TEXTURE_2D, rock[3]);  //  Concrete     
+	glBindTexture(GL_TEXTURE_2D, rock[1]);  //  Concrete     
 
 	//  Top
 	glNormal3f(0, 0, +1);
@@ -124,7 +129,7 @@ static void row(double x, double y, double z, double dx, double dy, double dz, d
 	glPopMatrix();
 }
 
-static void stands(int num, double x, double y, double z, double dx, double dy, double dz, double th)
+static void stands(const int num, double x, double y, double z, double dx, double dy, double dz, double th)
 {
 	//  Save transformations
 	glPushMatrix();
@@ -139,8 +144,8 @@ static void stands(int num, double x, double y, double z, double dx, double dy, 
 	glPopMatrix();
 }
 
-//  Cubeish
-static void stair(double x, double y, double z, double dx, double dy, double dz, double th)
+//  tex: 1 = brick, 2 = metal, 3 = stage, else concrete
+static void cube(const int tex, double x, double y, double z, double dx, double dy, double dz, double th)
 {
 	//  Save transformation
 	glPushMatrix();
@@ -149,8 +154,21 @@ static void stair(double x, double y, double z, double dx, double dy, double dz,
 	//glRotated(th,0,0,1);
 	glScaled(dx,dy,dz);
 
-	glColor3f(1.0,0.45,0.0);
-	glBindTexture(GL_TEXTURE_2D, rock[3]);  //  Concrete
+	if (tex == 2)
+	{
+		glColor3f(1.0,0.0,0.0);
+		glBindTexture(GL_TEXTURE_2D, rock[2]);  //  Metal
+	}
+	else if (tex == 3)
+	{
+		glColor3f(0.73,0.73,0.73);
+		glBindTexture(GL_TEXTURE_2D, rock[1]);
+	}
+	else 
+	{
+		glColor3f(1.0,0.99,0.73);
+		glBindTexture(GL_TEXTURE_2D, rock[1]);  //  Concrete
+	}
 
 	//  Top
 	glBegin(GL_QUADS);
@@ -169,23 +187,26 @@ static void stair(double x, double y, double z, double dx, double dy, double dz,
 	glTexCoord2f(0,1); glVertex3f(+1,+1,-1);
 	glEnd();
 
-	glBindTexture(GL_TEXTURE_2D, rock[2]);  //  Sandstone 256
+	if (tex == 1) 
+	{
+		glBindTexture(GL_TEXTURE_2D, rock[0]);  //  Brick 
+	}
 
 	//  Right
 	glBegin(GL_QUADS);
 	glNormal3f(+1, 0, 0);
-	glTexCoord2f(0,0); glVertex3f(+1,-1,+1);
-	glTexCoord2f(1,0); glVertex3f(+1,-1,-1);
-	glTexCoord2f(1,1); glVertex3f(+1,+1,-1);
-	glTexCoord2f(0,1); glVertex3f(+1,+1,+1);
+	glTexCoord2f(1,0); glVertex3f(+1,-1,+1);
+	glTexCoord2f(1,1); glVertex3f(+1,-1,-1);
+	glTexCoord2f(0,1); glVertex3f(+1,+1,-1);
+	glTexCoord2f(0,0); glVertex3f(+1,+1,+1);
 	glEnd();
 	//  Left
 	glBegin(GL_QUADS);
 	glNormal3f(-1, 0, 0);
-	glTexCoord2f(0,0); glVertex3f(-1,-1,-1);
-	glTexCoord2f(1,0); glVertex3f(-1,-1,+1);
-	glTexCoord2f(1,1); glVertex3f(-1,+1,+1);
-	glTexCoord2f(0,1); glVertex3f(-1,+1,-1);
+	glTexCoord2f(1,0); glVertex3f(-1,-1,-1);
+	glTexCoord2f(1,1); glVertex3f(-1,-1,+1);
+	glTexCoord2f(0,1); glVertex3f(-1,+1,+1);
+	glTexCoord2f(0,0); glVertex3f(-1,+1,-1);
 	glEnd();
 	//  Back
 	glBegin(GL_QUADS);
@@ -217,12 +238,12 @@ static void stairs(int num, double x, double y, double z, double dx, double dy, 
 
 	for (int i = 0; i < num; i++)
 	{ 
-		stair(x,y+(i*dy),z+(i*dz*2),dx,dy,dz,th);
+		cube(0,x,y+(i*dy),z+(i*dz*2),dx,dy,dz,th);
 	}
 	//  Undo transformations
 	glPopMatrix();
 }
-static void bigStairs(int num, double x, double y, double z, double dx, double dy, double dz, double th)
+static void pathEdge(int num, double x, double y, double z, double dx, double dy, double dz, double th)
 {
 	//  Save transformations
 	glPushMatrix();
@@ -231,8 +252,154 @@ static void bigStairs(int num, double x, double y, double z, double dx, double d
 
 	for (int i = 0; i < num; i++)
 	{ 
-		stair(x,y+(i*dy*4),z+(i*dz*4),dx,dy,dz,th);
+		cube(1,x,y+(i*dy*4),z+(i*dz*4),dx,dy,dz,th);
 	}
+	//  Undo transformations
+	glPopMatrix();
+}
+
+static void cylinder(const int _stacks, double x, double y, double z, double r, double h, double th)
+{
+	const double d = 10.0;  //  Degress per step
+	const double stacks = _stacks;
+	const double slices = 360.0 / d;
+	const double zStep = h / stacks;
+
+	int i, j;
+	double z0, z1;
+
+	//  Save transformation
+	glPushMatrix();
+
+	//  Offset
+	glTranslated(x,y,z);
+	glRotated(th,1,0,0);
+	//glRotated(ph,0,1,0);
+
+	glColor3d(1,0,0);  //  Red
+	glBindTexture(GL_TEXTURE_2D, rock[2]);  //  Metal
+
+	//  Construct top cricle
+	glNormal3d(0,0,1);
+	glBegin(GL_TRIANGLE_FAN);
+	glTexCoord2f(0.5, 0.5);
+	glVertex3d(0,0,h);  //  Center point of circle
+	for (i=slices; i>=0; i--)
+	{
+		glTexCoord2f(0.5 * Cos(i*d) + 0.5, 0.5 * Sin(i*d) + 0.5);
+		glVertex3d(r * Cos(i*d), r * Sin(i*d), h);
+	}
+	glEnd();
+	
+	//  Edge
+	z0 = 0.0;
+	z1 = zStep;
+
+	for (i = 1; i <= stacks; i++)
+	{
+		if (i == stacks)
+		{
+			z1 = h;
+		}
+
+		glBegin(GL_QUAD_STRIP);
+		for (j=0; j<=slices; j++)
+		{
+			double u = (double) j / (double) slices;
+			glNormal3d(Cos(j*d), Sin(j*d), 0);
+			glTexCoord2f(u, 0.0); glVertex3d(r * cos(2*PI*u), r * sin(2*PI*u), z0);
+			glTexCoord2f(u, 1.0); glVertex3d(r * cos(2*PI*u), r * sin(2*PI*u), z1);
+
+		}
+		glEnd();
+
+		z0 = z1;
+		z1 += zStep;
+	}
+
+	//  Construct bottom circle
+	glNormal3d(0,0,-1);
+	glBegin(GL_TRIANGLE_FAN);
+	glTexCoord2f(0.5, 0.5);
+	glVertex3d(0,0,0);  //  Center point of circle
+	for (i=0; i<=slices; i++)  //  For loop runs opposite way to allow for face culling
+	{
+		glTexCoord2f(0.5 * Cos(i*d) + 0.5, 0.5 * Sin(i*d) + 0.5);
+		glVertex3d(r * Cos(i*d), r * Sin(i*d), 0);
+	}
+	glEnd();
+
+	//  Undo transformations
+	glPopMatrix();
+}
+
+static void stage(double x, double y, double z, double dx, double dy, double dz, double th)
+{
+	//  Save transformations
+	glPushMatrix();
+	//  Offset
+	glRotated(th,0,0,1);
+	glScaled(dx,dy,dz);
+
+	//  Main stage floor
+	for (int i = 0; i < 25; i++)
+	{
+		int x = i * 8;
+		for (int j = 0; j < 25; j++)
+		{
+			int y = j * 8;
+			cube(3, -95+x,-220+y,0, 4,4,2, 0);
+		}
+	}
+
+	//  Right sub-stage 
+	cylinder(12, 140,-55,0, 2,60, 0);
+	cylinder(12, 140,-85,0, 2,60, 0);
+	cylinder(12, 110,-55,0, 2,60, 0);
+	cylinder(12, 110,-85,0, 2,60, 0);
+	cylinder(12, 110,-145,0, 2,60, 0);
+	cylinder(12, 110,-200,0, 2,60, 0);
+	
+	//  Right sub-stage roof
+	for (int i = 0; i < 9; i++)
+	{
+		int x = i * 6;
+		for (int j = 0; j < 32; j++)
+		{
+			int y = j * 6;
+			cube(2, 100+x,-220+y,60, 3,3,3, 0);
+		}
+	}
+
+	//  Left sub-stage
+	cylinder(12, -140,-55,0, 2,60, 0);
+	cylinder(12, -140,-85,0, 2,60, 0);
+	cylinder(12, -110,-55,0, 2,60, 0);
+	cylinder(12, -110,-85,0, 2,60, 0);
+	cylinder(12, -110,-145,0, 2,60, 0);
+	cylinder(12, -110,-200,0, 2,60, 0);
+	//  Left sub-stage roof
+	for (int i = 0; i < 9; i++)
+	{
+		int x = i * 6;
+		for (int j = 0; j < 32; j++)
+		{
+			int y = j * 6;
+			cube(2, -100-x,-220+y,60, 3,3,3, 0);
+		}
+	}
+
+	//  Main stage roof
+	for (int i = 0; i < 25; i++)
+	{
+		int x = i * 8;
+		for (int j = 0; j < 25; j++)
+		{
+			int y = j * 8;
+			cube(2, -95+x,-220+y,68, 4,4,5, 0);
+		}
+	}
+
 	//  Undo transformations
 	glPopMatrix();
 }
@@ -311,7 +478,7 @@ int key()
 		return 0;
 	}	
 	//  Toggles the axes
-	else if (keys[SDLK_0])
+	else if (keys[SDLK_a])
 	{
 		axes = 1 - axes;
 	}
@@ -350,7 +517,8 @@ int key()
 	//  Reset viewing angle
 	else if (keys[SDLK_0])
 	{
-		th = ph = 0;
+		th = Ox = Oy = Oz = 0;
+		ph = 15;
 	}
 	//  Decreases fov
 	else if (keys[SDLK_1])
@@ -419,10 +587,10 @@ void display()
 	glLoadIdentity();
 
 	//  Calulate eye coordinates 
-	double Ex = -2*dim*Sin(th)*Cos(ph);
-	double Ey = +2*dim        *Sin(ph);
-	double Ez = +2*dim*Cos(th)*Cos(ph);
-	gluLookAt(Ex,Ey,Ez, 0,0,0 , 0,Cos(ph),0);
+	double Ex = Ox-2*dim*Sin(th)*Cos(ph);
+	double Ey = Oy+2*dim        *Sin(ph);
+	double Ez = Oz+2*dim*Cos(th)*Cos(ph);
+	gluLookAt(Ex,Ey,Ez, Ox,Oy,Oz , 0,Cos(ph),0);
 
 	glPushMatrix();
 
@@ -470,11 +638,12 @@ void display()
 	glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
 
 	//  Draw scene
-	stairs(120, -155,0,-.5, 5,5,.5, 0);
-	stairs(120, 155,0,-.5, 5,5,.5, 0);
-	bigStairs(15, -170,5,1, 10,10,2, 0);
-	bigStairs(15, 170,5,1, 10,10,2, 0);
-	stands(60, 0,0,0, 150,5,1, 0);
+	stairs(240, -155,0,-.5, 5,5,.5, 0);
+	stairs(240, 155,0,-.5, 5,5,.5, 0);
+	pathEdge(30, -170,5,1, 10,10,2, 0);
+	pathEdge(30, 170,5,1, 10,10,2, 0);
+	stands(120, 0,0,0, 150,5,1, 0);
+	stage(0,0,0, 1,1,1, 0);
 
 	//  Turn lighting and textures off
 	glDisable(GL_LIGHTING);
@@ -485,12 +654,12 @@ void display()
 	if (axes)
 	{
 		glBegin(GL_LINES);
-		glVertex3d(0.0,0.0,0.0);
-		glVertex3d(AXES,0.0,0.0);
-		glVertex3d(0.0,0.0,0.0);
-		glVertex3d(0.0,AXES,0.0);
-		glVertex3d(0.0,0.0,0.0);
-		glVertex3d(0.0,0.0,AXES);
+		glVertex3d(Ox,Oy,Oz);
+		glVertex3d(AXES,Oy,Oz);
+		glVertex3d(Ox,Oy,Oz);
+		glVertex3d(Ox,AXES,Oz);
+		glVertex3d(Ox,Oy,Oz);
+		glVertex3d(Ox,Oy,AXES);
 		glEnd();
 		/*//  Label axes
 		glRasterPos3d(AXES,0.0,0.0);
@@ -540,11 +709,10 @@ int main(int argc, char *argv[])
 
 	
 	//  Load textures
-	rock[0] = LoadTexBMP("brick.bmp");
-	rock[1] = LoadTexBMP("sandstone.bmp");
-	rock[2] = LoadTexBMP("sandstone2.bmp");
-	rock[3] = LoadTexBMP("concrete.bmp");
-
+	rock[0] = LoadTexBMP("brick2.bmp");
+	rock[1] = LoadTexBMP("concrete2.bmp");
+	rock[2] = LoadTexBMP("metal.bmp");
+	
 	/*  Initialize audio
 	if (Mix_OpenAudio(44100,AUDIO_S16SYS,2,4096)) Fatal("Cannot initialize audio\n");
 	//  Load "The Wall"
@@ -575,7 +743,34 @@ int main(int argc, char *argv[])
 					break;
 				case SDL_KEYDOWN:
 					run = key();
-					t0 = t+0.5;  //  Wait 1/2 s before repeating
+					t0 = t+0.5;  //  Wait .5s before repeating
+					break;
+				case SDL_MOUSEMOTION:
+					if (mouse)
+					{
+						//  Left/right
+						Ox += (X - (int) event.motion.x);
+						//  Near/far or up/down
+						if (mouse < 0)
+						{
+							Oy -= (Y - (int) event.motion.y);
+						}
+						else
+						{
+							Oz += (Y - (int) event.motion.y);
+						}
+						//  Remember coordinates
+						X = (int) event.motion.x;
+						Y = (int) event.motion.y;
+					}
+					break;
+				case SDL_MOUSEBUTTONDOWN:
+					mouse = (event.button.button == SDL_BUTTON_LEFT) ? 1 : -1;
+					X = (int) event.button.x;
+					Y = (int) event.button.y;
+					break;
+				case SDL_MOUSEBUTTONUP:
+					mouse = 0;
 					break;
 				default:
 					break;  //  Do nothing
