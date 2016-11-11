@@ -35,14 +35,15 @@ double Oy = 0;	   //  Look-at y
 double Oz = 0;	   //  Look-at z
 int X,Y;           //  Last mouse coordinates
 int mouse = 0;      //  Move mode    
-unsigned int rock[3];  //  Rock textures
+unsigned int rock[6];  //  Rock textures
 
 SDL_Surface* screen;
 
 //  Curved rectangular prism 
-static void row(double x, double y, double z, double dx, double dy, double dz, double th)
+//  mode: 1 = wood, else = brick
+static void row(const int mode, double x, double y, double z, double dx, double dy, double dz, double th)
 {
-	const double d = 2.5;  //  Degress per step
+	const double d = 5.0;  //  Degress per step
 	const double slices = 180.0 / d;
 
 	//  Save transformation
@@ -52,8 +53,16 @@ static void row(double x, double y, double z, double dx, double dy, double dz, d
 	//glRotated(th,0,0,1);
 	glScaled(dx,dy,dz);
 
-	glColor3f(1.0,0.86,0.73);
-	glBindTexture(GL_TEXTURE_2D, rock[0]);  //  Brick
+	if (mode == 1)
+	{
+		glColor3f(0.7,0.55,0.43);  //  Light taupe
+		glBindTexture(GL_TEXTURE_2D, rock[3]);  //  Wood
+	}
+	else
+	{
+		glColor3f(1.0,0.86,0.73);  //  Peach
+		glBindTexture(GL_TEXTURE_2D, rock[0]);  //  Brick
+	}
 	
 	//  Front
 	for (int j=0; j<=slices; j++)
@@ -100,7 +109,15 @@ static void row(double x, double y, double z, double dx, double dy, double dz, d
 	glTexCoord2f(0,0); glVertex3f(-1,+1,-1);
 	glEnd();
 
-	glBindTexture(GL_TEXTURE_2D, rock[1]);  //  Concrete     
+
+	if (mode == 1)
+	{
+		glBindTexture(GL_TEXTURE_2D, rock[3]);  //  Wood
+	}
+	else 
+	{
+		glBindTexture(GL_TEXTURE_2D, rock[1]);  //  Concrete   
+	}  
 
 	//  Top
 	glNormal3f(0, 0, +1);
@@ -138,14 +155,15 @@ static void stands(const int num, double x, double y, double z, double dx, doubl
 
 	for (int i = 0; i < num; i++)
 	{ 
-		row(x,y+(i*dy*2),z+(i*dz*2),dx,dy,dz,th);
+		row(0,x,y+(i*dy*2),z+(i*dz*2),dx,dy,dz,th);
+		row(1,x,y+(i*dy*2)-2.65,z+(i*dz*2)+.8,dx-.02,dy/4,dz/4,th);
 	}
 	//  Undo transformations
 	glPopMatrix();
 }
 
-//  tex: 1 = brick, 2 = metal, 3 = stage, else concrete
-static void cube(const int tex, double x, double y, double z, double dx, double dy, double dz, double th)
+//  mode: 1 = brick, 2 = metal, 3 = concrete, 4 = DJ booth, else concrete
+static void cube(const int mode, double x, double y, double z, double dx, double dy, double dz, double th)
 {
 	//  Save transformation
 	glPushMatrix();
@@ -154,15 +172,19 @@ static void cube(const int tex, double x, double y, double z, double dx, double 
 	//glRotated(th,0,0,1);
 	glScaled(dx,dy,dz);
 
-	if (tex == 2)
+	if (mode == 2)
 	{
 		glColor3f(1.0,0.0,0.0);
 		glBindTexture(GL_TEXTURE_2D, rock[2]);  //  Metal
 	}
-	else if (tex == 3)
+	else if (mode == 3)
 	{
 		glColor3f(0.73,0.73,0.73);
 		glBindTexture(GL_TEXTURE_2D, rock[1]);
+	}
+	else if (mode == 4)
+	{
+		glBindTexture(GL_TEXTURE_2D, rock[4]);  //  DJ
 	}
 	else 
 	{
@@ -187,9 +209,13 @@ static void cube(const int tex, double x, double y, double z, double dx, double 
 	glTexCoord2f(0,1); glVertex3f(+1,+1,-1);
 	glEnd();
 
-	if (tex == 1) 
+	if (mode == 1) 
 	{
 		glBindTexture(GL_TEXTURE_2D, rock[0]);  //  Brick 
+	}
+	else if (mode == 4)
+	{
+		glBindTexture(GL_TEXTURE_2D, rock[5]); //  LED
 	}
 
 	//  Right
@@ -351,6 +377,9 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 			cube(3, -95+x,-220+y,0, 4,4,2, 0);
 		}
 	}
+
+	//  DJ Booth
+	cube(4, 0,-60,7, 25,12.5,8, 0);
 
 	//  Right sub-stage 
 	cylinder(12, 140,-55,0, 2,60, 0);
@@ -638,12 +667,13 @@ void display()
 	glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
 
 	//  Draw scene
+	stage(0,0,0, 1,1,1, 0);
 	stairs(240, -155,0,-.5, 5,5,.5, 0);
 	stairs(240, 155,0,-.5, 5,5,.5, 0);
 	pathEdge(30, -170,5,1, 10,10,2, 0);
 	pathEdge(30, 170,5,1, 10,10,2, 0);
 	stands(120, 0,0,0, 150,5,1, 0);
-	stage(0,0,0, 1,1,1, 0);
+	
 
 	//  Turn lighting and textures off
 	glDisable(GL_LIGHTING);
@@ -712,6 +742,9 @@ int main(int argc, char *argv[])
 	rock[0] = LoadTexBMP("brick2.bmp");
 	rock[1] = LoadTexBMP("concrete2.bmp");
 	rock[2] = LoadTexBMP("metal.bmp");
+	rock[3] = LoadTexBMP("wood.bmp");
+	rock[4] = LoadTexBMP("dj.bmp");
+	rock[5] = LoadTexBMP("led.bmp");
 	
 	/*  Initialize audio
 	if (Mix_OpenAudio(44100,AUDIO_S16SYS,2,4096)) Fatal("Cannot initialize audio\n");
