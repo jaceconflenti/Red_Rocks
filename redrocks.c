@@ -13,7 +13,7 @@
 
 #include "CSCIx229.h"  //  Doesn't include Print (glut dependency), use printF() instead
 
-#define AXES 100.0 //  Length of axes
+#define AXES 1000.0 //  Length of axes
 #define LD AXES*2  //  Radius of sun from origin
 #define LEN 8192   //  Max length of text string
 
@@ -34,10 +34,39 @@ double Ox = 0;	   //  Look-at x
 double Oy = 0;	   //  Look-at y
 double Oz = 0;	   //  Look-at z
 int X,Y;           //  Last mouse coordinates
-int mouse = 0;      //  Move mode    
+int mouse = 0;     //  Move mode    
+int left, right;   //  Object display list
 unsigned int rock[6];  //  Rock textures
 
 SDL_Surface* screen;
+
+//  Mode: 1 = left rock, else = right rock
+static void rocks(const int mode, double x, double y, double z, double dx, double dy, double dz, double th, double ph, double zh)
+{
+	//  Save transformations
+	glPushMatrix();
+	//  Offset
+	glTranslated(x,y,z);
+	glRotated(th,1,0,0);
+	glRotated(ph,0,1,0);
+	glRotated(zh,0,0,1);
+	glScaled(dx,dy,dz);
+
+	glColor3f(1.0,0.79,0.73);  //  Pale red
+	//glBindTexture(GL_TEXTURE_2D, rock[3]);  //  Red rock
+
+	if (mode == 1)
+	{
+		glCallList(left);
+	}
+	else
+	{
+		glCallList(right);
+	}
+
+	//  Undo transformations
+	glPopMatrix();
+}
 
 //  Curved rectangular prism 
 //  mode: 1 = wood, else = brick
@@ -300,7 +329,6 @@ static void cylinder(const int _stacks, double x, double y, double z, double r, 
 	//  Offset
 	glTranslated(x,y,z);
 	glRotated(th,1,0,0);
-	//glRotated(ph,0,1,0);
 
 	glColor3d(1,0,0);  //  Red
 	glBindTexture(GL_TEXTURE_2D, rock[2]);  //  Metal
@@ -667,12 +695,14 @@ void display()
 	glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
 
 	//  Draw scene
-	stage(0,0,0, 1,1,1, 0);
-	stairs(240, -155,0,-.5, 5,5,.5, 0);
-	stairs(240, 155,0,-.5, 5,5,.5, 0);
-	pathEdge(30, -170,5,1, 10,10,2, 0);
-	pathEdge(30, 170,5,1, 10,10,2, 0);
-	stands(120, 0,0,0, 150,5,1, 0);
+	stage(0,0,0, 1,1,1, -10);
+	rocks(1, 225,1000,-50, 1250,1250,1250, 100,160,-4);
+	rocks(0, 750,-200,-10, 1000,1000,1000, 95,0,-25);
+	stairs(240, -155,0,-.5, 5,5,.5, -10);
+	stairs(240, 155,0,-.5, 5,5,.5, -10);
+	pathEdge(30, -170,5,1, 10,10,2, -10);
+	pathEdge(30, 170,5,1, 10,10,2, -10);
+	stands(120, 0,0,0, 150,5,1, -10);
 	
 
 	//  Turn lighting and textures off
@@ -745,6 +775,10 @@ int main(int argc, char *argv[])
 	rock[3] = LoadTexBMP("wood.bmp");
 	rock[4] = LoadTexBMP("dj.bmp");
 	rock[5] = LoadTexBMP("led.bmp");
+
+	//  Load objects
+	left = LoadOBJ("left.obj");
+	right = LoadOBJ("right.obj");
 	
 	/*  Initialize audio
 	if (Mix_OpenAudio(44100,AUDIO_S16SYS,2,4096)) Fatal("Cannot initialize audio\n");
