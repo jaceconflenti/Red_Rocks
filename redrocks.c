@@ -52,8 +52,8 @@ static void rocks(const int mode, double x, double y, double z, double dx, doubl
 	glRotated(zh,0,0,1);
 	glScaled(dx,dy,dz);
 
-	glColor3f(1.0,0.79,0.73);  //  Pale red
-	//glBindTexture(GL_TEXTURE_2D, rock[3]);  //  Red rock
+	glColor3f(1,0.5,0.35);  
+	//glBindTexture(GL_TEXTURE_2D, rock[6]);  //  Stone
 
 	if (mode == 1)
 	{
@@ -632,7 +632,7 @@ void reshape(int width, int height)
    //  Set projection
    Project(fov,asp,dim);
 }
-
+ 
 void display()
 {
 	//  Clear screen and Z-buffer
@@ -650,7 +650,7 @@ void display()
 	gluLookAt(Ex,Ey,Ez, Ox,Oy,Oz , 0,Cos(ph),0);
 
 	glPushMatrix();
-
+ 
 	glRotated(-90,1,0,0);
 
 	//  Draw sky
@@ -660,10 +660,10 @@ void display()
 	{
 		float F = (light==2) ? 1 : 0.3;
 		//  Translate intensity to color vectors
-		float Ambient[]   = {0.3*F,0.3*F,0.3*F,1.0};
+		float Ambient[]   = {0.2*F,0.2*F,0.2*F,1.0};
 		float Diffuse[]   = {0.5*F,0.5*F,0.5*F,1.0};
 		float Specular[]  = {1.0*F,1.0*F,1.0*F,1.0};
-		float white[] = {1.0,1.0,1.0,1.0};
+		float yellow[] = {1.0,1.0,0.0,1.0};
 		//  Light position
 		float Position[]  = {LD*Cos(zh),yl,LD*Sin(zh),1.0};
 		//  Draw light position as ball (still no lighting here)
@@ -683,7 +683,7 @@ void display()
 		glLightfv(GL_LIGHT0,GL_SPECULAR,Specular);
 		glLightfv(GL_LIGHT0,GL_POSITION,Position);
 		glMaterialf(GL_FRONT_AND_BACK,GL_SHININESS,32.0f);
-		glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,white);
+		glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,yellow);
 	}
 	else
 	{
@@ -696,13 +696,15 @@ void display()
 
 	//  Draw scene
 	stage(0,0,0, 1,1,1, -10);
-	rocks(1, 225,1000,-50, 1250,1250,1250, 100,160,-4);
-	rocks(0, 750,-200,-10, 1000,1000,1000, 95,0,-25);
 	stairs(240, -155,0,-.5, 5,5,.5, -10);
 	stairs(240, 155,0,-.5, 5,5,.5, -10);
 	pathEdge(30, -170,5,1, 10,10,2, -10);
 	pathEdge(30, 170,5,1, 10,10,2, -10);
 	stands(120, 0,0,0, 150,5,1, -10);
+	rocks(1, -10,525,100, 750,2250,1, 11,178,84);        //  Stand patch
+	rocks(1, 50,1345,116, 900,900,1, 90,166,175);        //  Back patch
+	rocks(1, 300,1000,-50, 1250,1250,1250, 100,160,-4);  //  Left rock
+	rocks(0, 650,-200,-100, 1000,1000,1000, 95,0,-30);   //  Right rock
 	
 
 	//  Turn lighting and textures off
@@ -766,7 +768,6 @@ int main(int argc, char *argv[])
 	SDL_WM_SetCaption("Steven Conflenti: CSCI 4229 Project", "Conflenti");
 	//  Set screen size
 	reshape(screen->w,screen->h);
-
 	
 	//  Load textures
 	rock[0] = LoadTexBMP("brick2.bmp");
@@ -775,6 +776,7 @@ int main(int argc, char *argv[])
 	rock[3] = LoadTexBMP("wood.bmp");
 	rock[4] = LoadTexBMP("dj.bmp");
 	rock[5] = LoadTexBMP("led.bmp");
+	//rock[6] = LoadTexBMP("stone.bmp");
 
 	//  Load objects
 	left = LoadOBJ("left.obj");
