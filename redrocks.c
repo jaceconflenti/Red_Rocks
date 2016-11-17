@@ -11,37 +11,37 @@
  * 3/4 		Decrease/Increase dim  
  */
 
-#include "CSCIx229.h"  //  Doesn't include Print (glut dependency), use printF() instead
+#include "CSCIx229.h"   //  Doesn't include Print (glut dependency), use printF() instead
 
-#define AXES 1000.0 //  Length of axes
-#define LD AXES*2  //  Radius of sun from origin
-#define LEN 8192   //  Max length of text string
+#define AXES 1000.0     //  Length of axes
+#define LD AXES*2       //  Radius of sun from origin
+#define LEN 8192        //  Max length of text string
 
-int fov = 55;      //  Field of view 
-double asp = 1;    //  Aspect ratio
-double dim = AXES; //  'Radius' of world
-int axes = 1;      //  Display axes
-int th = 0;        //  Azimuth of view angle
-int ph = 15;       //  Elevation of view angle
-int zh = 0;        //  Azimouth of light
-int light = 1;     //  Lighting
-double yl = 0.0;   //  Elevation of light
-int move = 1;      //  Move light
-double Ex = 1;     //  X-coordinate of eye
-double Ey = 1;     //  Y-coordinate of eye
-double Ez = 1;     //  Z-coordinate of eye
-double Ox = 0;	   //  Look-at x
-double Oy = 0;	   //  Look-at y
-double Oz = 0;	   //  Look-at z
-int X,Y;           //  Last mouse coordinates
-int mouse = 0;     //  Move mode    
-int left, right;   //  Object display list
-unsigned int rock[6];  //  Rock textures
+int fov = 55;           //  Field of view 
+double asp = 1;         //  Aspect ratio
+double dim = AXES;      //  'Radius' of world
+int axes = 1;           //  Display axes
+int th = 0;             //  Azimuth of view angle
+int ph = 15;            //  Elevation of view angle
+int zh = 0;             //  Azimouth of light
+int light = 1;          //  Lighting
+double yl = 0.0;        //  Elevation of light
+int move = 1;           //  Move light
+double Ex = 1;          //  X-coordinate of eye
+double Ey = 1;          //  Y-coordinate of eye
+double Ez = 1;          //  Z-coordinate of eye
+double Ox = 0;	        //  Look-at x
+double Oy = 0;	        //  Look-at y
+double Oz = 0;	        //  Look-at z
+int X,Y;                //  Last mouse coordinates
+int mouse = 0;          //  Move mode    
+unsigned int rock[6];   //  Rock textures
+int left, right, tree;  //  Object display lists
 
 SDL_Surface* screen;
 
 //  Mode: 1 = left rock, else = right rock
-static void rocks(const int mode, double x, double y, double z, double dx, double dy, double dz, double th, double ph, double zh)
+static void drawRock(const int mode, double x, double y, double z, double dx, double dy, double dz, double th, double ph, double zh)
 {
 	//  Save transformations
 	glPushMatrix();
@@ -63,6 +63,23 @@ static void rocks(const int mode, double x, double y, double z, double dx, doubl
 	{
 		glCallList(right);
 	}
+
+	//  Undo transformations
+	glPopMatrix();
+}
+
+static void drawTree(double x, double y, double z, double dx, double dy, double dz, double th, double ph, double zh)
+{
+	//  Save transformations
+	glPushMatrix();
+	//  Offset
+	glTranslated(x,y,z);
+	glRotated(th,1,0,0);
+	glRotated(ph,0,1,0);
+	glRotated(zh,0,0,1);
+	glScaled(dx,dy,dz);
+
+	glCallList(tree);
 
 	//  Undo transformations
 	glPopMatrix();
@@ -298,6 +315,8 @@ static void stairs(int num, double x, double y, double z, double dx, double dy, 
 	//  Undo transformations
 	glPopMatrix();
 }
+
+//  Brick rectangular boxes and trees
 static void pathEdge(int num, double x, double y, double z, double dx, double dy, double dz, double th)
 {
 	//  Save transformations
@@ -305,10 +324,34 @@ static void pathEdge(int num, double x, double y, double z, double dx, double dy
 	//  Offset
 	glRotated(th,0,0,1);
 
+	int xTree = (x > 0) ? x+50 : x-50; 
+	int x2Tree = (x > 0) ? x+80 : x-110;
+	int x3Tree = (x > 0) ? x+105 : x-160; 
+
 	for (int i = 0; i < num; i++)
 	{ 
-		cube(1,x,y+(i*dy*4),z+(i*dz*4),dx,dy,dz,th);
+		if (((i%5) == 0) && (i != 0))
+		{
+			drawTree(xTree,y+(i*dy*4),z+(i*dz*4)-8,dx/5,dy/5,dz*.75,th+21,0,0);			
+		}
+
+		cube(1,x,y+(i*dy*4),z+(i*dz*4),dx,dy,dz,th); 
 	}
+
+	if (x < 0)
+	{
+		drawTree(x2Tree,y+(13*dy*4),z+(13*dz*4)-8,dx/8,dy/8,dz*.5,th+21,0,0);
+		drawTree(x3Tree,y+(10*dy*4),z+(10*dz*4)-10,dx/3,dy/3,dz,th+21,0,0);
+		drawTree(x3Tree,y+(23*dy*4),z+(23*dz*4)-10,dx/3,dy/3,dz,th+21,0,0);	
+		drawTree(x-125,y+(18*dy*4),z+(18*dz*4)-8,dx/5,dy/5,dz*.75,th+21,0,0);		
+	}
+	else 
+	{
+		drawTree(x+35,y+(3*dy*4),z+(3*dz*4)-8,dx/8,dy/8,dz*.5,th+21,0,0);
+		drawTree(x3Tree,y+(18*dy*4),z+(18*dz*4)-8,dx/8,dy/8,dz*.5,th+21,0,0);
+		drawTree(x2Tree,y+(28*dy*4),z+(28*dz*4)-8,dx/8,dy/8,dz*.5,th+21,0,0);
+	}
+
 	//  Undo transformations
 	glPopMatrix();
 }
@@ -392,7 +435,8 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 	//  Save transformations
 	glPushMatrix();
 	//  Offset
-	glRotated(th,0,0,1);
+	glTranslated(x,y,z);
+	glRotated(th,0,0,1); 
 	glScaled(dx,dy,dz);
 
 	//  Main stage floor
@@ -407,7 +451,7 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 	}
 
 	//  DJ Booth
-	cube(4, 0,-60,7, 25,12.5,8, 0);
+	cube(4, 0,-60,7, 25,12.5,8, 0); 
 
 	//  Right sub-stage 
 	cylinder(12, 140,-55,0, 2,60, 0);
@@ -694,18 +738,17 @@ void display()
 	glEnable(GL_TEXTURE_2D);
 	glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
 
-	//  Draw scene
-	stage(0,0,0, 1,1,1, -10);
-	stairs(240, -155,0,-.5, 5,5,.5, -10);
-	stairs(240, 155,0,-.5, 5,5,.5, -10);
-	pathEdge(30, -170,5,1, 10,10,2, -10);
-	pathEdge(30, 170,5,1, 10,10,2, -10);
-	stands(120, 0,0,0, 150,5,1, -10);
-	rocks(1, -10,525,100, 750,2250,1, 11,178,84);        //  Stand patch
-	rocks(1, 50,1345,116, 900,900,1, 90,166,175);        //  Back patch
-	rocks(1, 300,1000,-50, 1250,1250,1250, 100,160,-4);  //  Left rock
-	rocks(0, 650,-200,-100, 1000,1000,1000, 95,0,-30);   //  Right rock
-	
+	//  Draw scene 
+	stage(-20,0,0, 1,1,1, -10); 
+	stairs(240, -175,0,-.5, 5,5,.5, -10);
+	stairs(240, 135,0,-.5, 5,5,.5, -10);
+	pathEdge(30, -190,5,1, 10,10,2, -10);
+	pathEdge(30, 150,5,1, 10,10,2, -10);
+	stands(120, -20,0,0, 150,5,1, -10);
+	drawRock(1, 38,525,100, 750,2250,1, 11,-2,60);          //  Stand patch
+	drawRock(1, -60,1360,110.5, 900,900,1, 90,168.5,174.25);   //  Back patch
+	drawRock(1, 315,1000,-50, 1250,1250,1250, 100,160,-4);  //  Left rock
+	drawRock(0, 626,-200,-100, 1000,1000,1000, 0,30,-4);    //  Right rock
 
 	//  Turn lighting and textures off
 	glDisable(GL_LIGHTING);
@@ -720,7 +763,7 @@ void display()
 		glVertex3d(AXES,Oy,Oz);
 		glVertex3d(Ox,Oy,Oz);
 		glVertex3d(Ox,AXES,Oz);
-		glVertex3d(Ox,Oy,Oz);
+		glVertex3d(Ox,Oy,Oz); 
 		glVertex3d(Ox,Oy,AXES);
 		glEnd();
 		/*//  Label axes
@@ -760,27 +803,27 @@ int main(int argc, char *argv[])
 	Mix_Music* music;
 
 	//  Initialize SDL
-	SDL_Init(SDL_INIT_VIDEO);
+	SDL_Init(SDL_INIT_VIDEO); 
 	//  Set size, resizable and double buffering
 	screen = SDL_SetVideoMode(1280,720,0,SDL_OPENGL|SDL_RESIZABLE|SDL_DOUBLEBUF);
 	if (!screen ) Fatal("Cannot set SDL video mode\n");
 	//  Set window and icon labels
-	SDL_WM_SetCaption("Steven Conflenti: CSCI 4229 Project", "Conflenti");
+	SDL_WM_SetCaption("Steven Conflenti: CSCI 4229 Project", "Red Rocks Amphitheatre");
 	//  Set screen size
 	reshape(screen->w,screen->h);
 	
-	//  Load textures
-	rock[0] = LoadTexBMP("brick2.bmp");
-	rock[1] = LoadTexBMP("concrete2.bmp");
+	//  Load textures 
+	rock[0] = LoadTexBMP("brick.bmp");
+	rock[1] = LoadTexBMP("concrete.bmp");
 	rock[2] = LoadTexBMP("metal.bmp");
-	rock[3] = LoadTexBMP("wood.bmp");
-	rock[4] = LoadTexBMP("dj.bmp");
-	rock[5] = LoadTexBMP("led.bmp");
-	//rock[6] = LoadTexBMP("stone.bmp");
-
+	rock[3] = LoadTexBMP("wood.bmp"); 
+	rock[4] = LoadTexBMP("dj.bmp"); 
+	rock[5] = LoadTexBMP("led.bmp"); 
+ 
 	//  Load objects
 	left = LoadOBJ("left.obj");
 	right = LoadOBJ("right.obj");
+	tree = LoadOBJ("tree.obj");
 	
 	/*  Initialize audio
 	if (Mix_OpenAudio(44100,AUDIO_S16SYS,2,4096)) Fatal("Cannot initialize audio\n");

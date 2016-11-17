@@ -1,6 +1,6 @@
-# Blender v2.78 (sub 0) OBJ File: ''
+# Blender v2.78 (sub 0) OBJ File: 'left.blend'
 # www.blender.org
-mtllib left.mtl
+mtllib rock.mtl
 o Plane
 v 0.629293 0.138151 -0.485278
 v 0.747615 0.327086 0.009699

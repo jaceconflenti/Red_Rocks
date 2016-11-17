@@ -1,0 +1,39 @@
+# Blender MTL File: 'tree.blend'
+# Material Count: 3
+
+newmtl Bark
+Ns 3.921569
+Ka 1.000000 1.000000 1.000000
+Kd 0.148876 0.140308 0.116940
+Ks 0.000000 0.000000 0.000000
+Ke 0.007444 0.007015 0.005847
+Ni 1.000000
+d 1.000000
+illum 1
+map_Bump -bm -1.400000 bark2_bump.bmp
+map_Kd bark2.bmp
+map_Ks bark2_spec.bmp
+map_Ns bark2_spec.bmp
+
+newmtl Leave
+Ns 3.921569
+Ka 1.000000 1.000000 1.000000
+Kd 0.255821 0.364700 0.167767
+Ks 0.000000 0.000000 0.000000
+Ke 0.005116 0.007294 0.003355
+Ni 1.000000
+d 1.000000
+illum 1
+map_Bump -bm -0.400000 leaf8_b.bmp
+map_Kd leaf8_d.bmp
+map_Tr leaf8_s.bmp
+
+newmtl Material.002
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.006935 0.006935 0.006935
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 1
