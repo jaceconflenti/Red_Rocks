@@ -1004,7 +1004,7 @@ void display()
 	glRotated(-90,1,0,0);
 
 	//  Draw sky
-	drawSky();
+	//drawSky();
 
 	//  Light switch
 	if (light)
@@ -1054,6 +1054,26 @@ void display()
 	glDisable(GL_LIGHTING);
 	glDisable(GL_TEXTURE_2D);
 
+	glColor3f(1,1,1);
+	if (axes)
+	{
+		glBegin(GL_LINES);
+		glVertex3d(Ox,Oy,Oz);
+		glVertex3d(AXES,Oy,Oz);
+		glVertex3d(Ox,Oy,Oz);
+		glVertex3d(Ox,AXES,Oz);
+		glVertex3d(Ox,Oy,Oz);
+		glVertex3d(Ox,Oy,AXES);
+		glEnd();
+		//  Label axes
+		glRasterPos3d(AXES,0.0,0.0);
+		Print("X");
+		glRasterPos3d(0.0,AXES,0.0);
+		Print("Y");
+		glRasterPos3d(0.0,0.0,AXES);
+		Print("Z");
+	}
+
 	glPopMatrix();
 
 	//  Render the scene and make it visible
@@ -1100,20 +1120,14 @@ int main(int argc, char *argv[])
 
 	//  Create shader programs
 	shader = CreateShaderProg("dome.vert","dome.frag");
-	
-	if (play)
-	{
-		//  Initialize audio
-		if (Mix_OpenAudio(44100,AUDIO_S16SYS,2,4096)) Fatal("Cannot initialize audio\n");
-		for (int i = 0; i < SONGS; i++)
-		{
-			//  Load songs
-			music = Mix_LoadMUS(songs[i]);
-			if (!music) Fatal("Cannot load " + *songs[track]);
-			//  Play (looping)
-			Mix_PlayMusic(music,1);
-		}
-	}
+
+	//  Initialize audio
+	if (Mix_OpenAudio(44100,AUDIO_S16SYS,2,4096)) Fatal("Cannot initialize audio\n");
+	//  Load "The Wall"
+	music = Mix_LoadMUS("thewall.ogg");
+	if (!music) Fatal("Cannot load thewall.ogg\n");
+	//  Play (looping)
+	Mix_PlayMusic(music, 1);
 
 	//  SDL event loop
 	ErrCheck("init");
