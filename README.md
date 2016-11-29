@@ -1,9 +1,7 @@
 # Red Rocks Amphitheatre 
 ## Steven Jace Conflenti
  
-### Known Issues:
-* Sky - lines instead of stars, lines in day
-* Music? - I haven't spent the time yet to try and fix sound in my VM, so I'm not sure if music is working or not.
+### Run with ./redrocks
 
 ### Key bindings:
 ESC		Exit
@@ -18,6 +16,10 @@ f 		Cycle light
 3/4 		Decrease/Increase dim
 5 		Default viewing angle
 6 		Alternate viewing angle
+
+### Known Issues:
+* Sky - lines instead of stars, lines in day
+* Music? - I haven't spent the time yet to try and fix sound in my VM, so I'm not sure if music is working or not.
 
 ### Things I Spent Significant Time On
 * Skydome - I spent way too much time trying to create a far too complex sky.
