@@ -1,34 +1,35 @@
 /*
  * Key bindings:
  * ESC		Exit
- * a 		Toggle axes
- * s 		Toggle light movement
- * l 		Cycle light
- * i        Toggle infinity
+ * Spacebar Pause music
+ * n/m  	Previous/Next song
+ * s 		Toggle sky
+ * d 		Toggle light movement
+ * f 		Cycle light
  * [/] 		Move light
  * -/+ 		Change light elevation
- * ` 		Reset viewing angle
  * 1/2		Decrease/Increase fov
  * 3/4 		Decrease/Increase dim
- * 5/6  	Decrease/Increase spotlight cutoff angle
- * 7/8		Decrease/Increase spotlight exponent
- * 8/9      Previous/Next song
- * Spacebar Pause music
+ * 5 		Default viewing angle
+ * 6 		Alternate viewing angle
  */
 
-#include "CSCIx229.h"   //  Doesn't include Print (glut dependency), use printF() instead
+#include <SDL/SDL.h>
+#include <SDL/SDL_mixer.h>
+#include "CSCIx229.h"
 
-#define AXES 1500.0     //  Length of axes
-#define LEN 8192        //  Max length of text string
+#define LEN 8192        //  Max length of text string 
 
 #define SONGS 2			//  Number of songs
 const char *songs[SONGS] = {"Nyboda.mp3", "The_Unborn_Dancing.mp3"};  //  Songs downloaded from freemusicarchive.org
-
-int play = 1;			//  Play music
+Mix_Music* music[SONGS];
+int play = 0;			//  Play music
 int track = 0;          //  Music track
+
+#define AXES 1500.0     //  Length of axes
+double dim = AXES;      //  'Radius' of world
 int fov = 60;           //  Field of view 
 double asp = 1;         //  Aspect ratio
-double dim = AXES;      //  'Radius' of world
 int axes = 1;           //  Display axes
 int th = 190;           //  Azimuth of view angle
 int ph = 5;             //  Elevation of view angle
@@ -50,12 +51,10 @@ double Oz = 2000;	    //  Look-at z
 int X,Y;                //  Last mouse coordinates
 int mouse = 0;          //  Move mode    
 unsigned int rock[6];   //  Rock/surface textures
-unsigned int sky[3];    //  Sky textures
+unsigned int sky[2];    //  Sky textures
 int shader = 0;         //  Shader program
-float sx = 0;			//  Spotlight x position
-float sy = 0;			//  Spotlight y position
-float sz = 1;			//  Spotlight z position
 int left, right, tree, dome, spotlight;  //  Belnder object display lists
+int skySwitch = 1;      //  Sky switch
 
 //  Base plane for scene
 static void drawGround(double x, double y, double z, double th)
@@ -258,8 +257,8 @@ static void stands(const int num, double x, double y, double z, double dx, doubl
 
 	for (int i = 0; i < num; i++)
 	{ 
-		row(0,x,y+(i*dy*2),z+(i*dz*2),dx,dy,dz,th);
-		row(1,x,y+(i*dy*2)-2.65,z+(i*dz*2)+.8,dx-.02,dy/4,dz/4,th);
+		row(0,x,y+(i*dy*2),z+(i*dz*2),dx,dy,dz,th);  //  Brick
+		row(1,x,y+(i*dy*2)-2.65,z+(i*dz*2)+.8,dx-.02,dy/4,dz/4,th);  //  Wood
 	}
 	//  Undo transformations
 	glPopMatrix();
@@ -274,54 +273,22 @@ static void drawSpotlight(const int lightNum, double x, double y, double z, doub
 	glPushMatrix();
 	//  Offset
 	glTranslated(x,y,z);
-	glRotated(Cos(Th)*Sin(Ph),1,0,0);
-	glRotated(Sin(Th)*Sin(Ph),0,1,0);
 	glScaled(dx,dy,dz);
 
-	/*float Position[] = {sx+Cos(Th),sy+Sin(Th),sz,1-inf};
-	float Direction[] = {Cos(Th)*Sin(Ph),Sin(Th)*Sin(Ph),-Cos(Ph),0};
-	float Color[] = {r,g,b,1.0};
-
-	float F = (light==2) ? 1 : 0.3;
-	//  Translate intensity to color vectors
-	float Ambient[]   = {0.2*F,0.2*F,0.2*F,1.0};
-	float Diffuse[]   = {0.5*F,0.5*F,0.5*F,1.0};
-	float Specular[]  = {1.0*F,1.0*F,1.0*F,1.0};
-
-	//  glColor sets ambient and diffuse color materials
-	glColorMaterial(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-	//  Set specular colors
-	glMaterialfv(GL_FRONT,GL_SPECULAR,Color);
-	glMaterialf(GL_FRONT,GL_SHININESS,1.0);
-	//  Enable light lightNum
-	glEnable(GL_LIGHT0+lightNum);
-	//  Set ambient, diffuse, specular components and position of light
-	glLightfv(GL_LIGHT0+lightNum,GL_AMBIENT,Ambient);
-	glLightfv(GL_LIGHT0+lightNum,GL_DIFFUSE,Diffuse);
-	glLightfv(GL_LIGHT0+lightNum,GL_SPECULAR,Specular);
-	glLightfv(GL_LIGHT0+lightNum,GL_POSITION,Position);
-	//  Set spotlight parameters
-	glLightfv(GL_LIGHT0+lightNum,GL_SPOT_DIRECTION,Direction);
-	glLightf(GL_LIGHT0+lightNum,GL_SPOT_CUTOFF,sco);
-	glLightf(GL_LIGHT0+lightNum,GL_SPOT_EXPONENT,Exp);
-	//  Set attenuation
-	//glLightf(GL_LIGHT0+lightNum,GL_CONSTANT_ATTENUATION,1.0);*/
-	
-	glCallList(spotlight);
+	//glCallList(spotlight);
+	ErrCheck("after spotlight");
 
 	//  Undo transformations
 	glPopMatrix();
 }
 
 //  mode: 1 = brick, 2 = metal, 3 = concrete, 4 = DJ booth, else concrete
-static void cube(const int mode, double x, double y, double z, double dx, double dy, double dz, double th)
+static void cube(const int mode, double x, double y, double z, double dx, double dy, double dz)
 {
 	//  Save transformation
 	glPushMatrix();
 	//  Offset
 	glTranslated(x,y,z);
-	//glRotated(th,0,0,1);
 	glScaled(dx,dy,dz);
 
 	if (mode == 2)
@@ -416,7 +383,7 @@ static void stairs(int num, double x, double y, double z, double dx, double dy, 
 
 	for (int i = 0; i < num; i++)
 	{ 
-		cube(0,x,y+(i*dy),z+(i*dz*2),dx,dy,dz,th);
+		cube(0,x,y+(i*dy),z+(i*dz*2),dx,dy,dz);
 	}
 	//  Undo transformations
 	glPopMatrix();
@@ -438,10 +405,10 @@ static void pathEdge(int num, double x, double y, double z, double dx, double dy
 	{ 
 		if (((i%5) == 0) && (i != 0))
 		{
-			//drawTree(xTree,y+(i*dy*4),z+(i*dz*4)-8,dx/5,dy/5,dz*.75,th+21,0,0);			
+			drawTree(xTree,y+(i*dy*4),z+(i*dz*4)-8,dx/5,dy/5,dz*.75,th+21,0,0);			
 		}
 
-		cube(1,x,y+(i*dy*4),z+(i*dz*4),dx,dy,dz,th); 
+		cube(1,x,y+(i*dy*4),z+(i*dz*4),dx,dy,dz); 
 	}
 
 	if (x < 0)
@@ -561,12 +528,12 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 		for (int j = 0; j < 25; j++)
 		{
 			int y = j * 8;
-			cube(3, -95+x,-220+y,0, 4,4,2, 0);
+			cube(3, -95+x,-220+y,0, 4,4,2);
 		}
 	}
 
 	//  DJ Booth
-	cube(4, 0,-60,7, 25,12.5,8, 0); 
+	cube(4, 0,-60,7, 25,12.5,8); 
 
 	//  Right sub-stage 
 	cylinder(12, 140,-55,0, 2,60, 0);
@@ -583,7 +550,7 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 		for (int j = 0; j < 32; j++)
 		{
 			int y = j * 6;
-			cube(2, 100+x,-220+y,60, 3,3,3, 0);
+			cube(2, 100+x,-220+y,60, 3,3,3);
 		}
 	}
 
@@ -602,7 +569,7 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 		for (int j = 0; j < 32; j++)
 		{
 			int y = j * 6;
-			cube(2, -100-x,-220+y,60, 3,3,3, 0);
+			cube(2, -100-x,-220+y,60, 3,3,3);
 		}
 	}
 
@@ -613,7 +580,7 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 		for (int j = 0; j < 25; j++)
 		{
 			int y = j * 8;
-			cube(2, -95+x,-220+y,68, 4,4,5, 0);
+			cube(2, -95+x,-220+y,68, 4,4,5);
 		}
 	}
 
@@ -622,21 +589,17 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 }
 
 //  Adapted from example 18 code
-static void Vertex(int th,int ph,const int tex)
+static void Vertex(int th,int ph)
 {
 	double x = -Sin(th)*Cos(ph);
 	double y =  Cos(th)*Cos(ph);
 	double z =          Sin(ph);
 	glNormal3d(x,y,z);
-	if (tex)
-	{
-		glTexCoord2d(th/360.0,ph/180.0+0.5);
-	}
 	glVertex3d(x,y,z);
 }
 
 //  Adapted from example 13 code
-static void ball(double x,double y,double z,double r, const int tex)
+static void ball(double x,double y,double z,double r)
 {
 	int th,ph;
 	int inc = 10;
@@ -647,11 +610,7 @@ static void ball(double x,double y,double z,double r, const int tex)
 	glTranslated(x,y,z);
 	glScaled(r,r,r);
 
-	glColor3f(0.0,0.0,0.0);
-	if (tex)
-	{
-		glBindTexture(GL_TEXTURE_2D, sky[2]);
-	}
+	glColor3f(1.0,1.0,0.0);
 
 	//  Bands of latitude
 	for (ph=-90;ph<90;ph+=inc)
@@ -659,8 +618,8 @@ static void ball(double x,double y,double z,double r, const int tex)
 		glBegin(GL_QUAD_STRIP);
 		for (th=0;th<=360;th+=2*inc)
 		{
-			Vertex(th,ph,tex);
-			Vertex(th,ph+inc,tex);
+			Vertex(th,ph);
+			Vertex(th,ph+inc);
 		}
 		glEnd();
 	}
@@ -686,34 +645,24 @@ static void drawScene()
 
 static void drawSky()
 {
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-
 	glUseProgram(shader);
 
-	int id = glGetUniformLocation(shader, "glow");
-	int id2 = glGetUniformLocation(shader, "color");
-	int id3 = glGetUniformLocation(shader, "star");
+	int id = glGetUniformLocation(shader, "blue");
+	int id2 = glGetUniformLocation(shader, "star");
+	
 	if (id >= 0) glUniform1i(id, 0);
 	if (id2 >= 0) glUniform1i(id2, 1);
-	if (id3 >= 0) glUniform1i(id3, 2);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, sky[0]);
 
-	glActiveTexture(GL_TEXTURE0 + 1);
+	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, sky[1]);
-
-	glActiveTexture(GL_TEXTURE0 + 2);
-	glBindTexture(GL_TEXTURE_2D, sky[2]);
 
 	drawDome(0,750,-50, 1500,1500,1500, 90);
 
+	glActiveTexture(GL_TEXTURE0);
 	glUseProgram(0);
-
-	ball(0,750,-50, 1600, 1);
-
-	glDisable(GL_BLEND);
 }
 
 //  Shader functions adapted from Ex 27
@@ -819,26 +768,22 @@ int key()
 	{
 		return 0;
 	}	
-	//  Toggles the axes
-	else if (keys[SDLK_a])
+	//  Toggles sky
+	else if (keys[SDLK_s])
 	{
-		axes = 1 - axes;
+		skySwitch = 1 - skySwitch;
 	}
 	//  Toggles light movement
-	else if (keys[SDLK_s])
+	else if (keys[SDLK_d])
 	{
 		move = 1 - move;
 	}
 	//  Cycles light
-	else if (keys[SDLK_l])
+	else if (keys[SDLK_f])
 	{
 		light = (light+1)%3;
 	}
-	//  Toggles infinity
-	else if (keys[SDLK_i])
-	{
-		inf = 1 - inf;
-	}
+
 	else if (keys[SDLK_l] && shift)
 	{
 		light = (light+2)%3;
@@ -861,15 +806,6 @@ int key()
 	{
 		yl += 5.0; 
 	}
-	//  Reset viewing angle
-	else if (keys[SDLK_BACKQUOTE])
-	{
-		th = 190;           
-		ph = 5;
-		Ox = -350;	   
-		Oy = 20;	     
-		Oz = 2000;
-	}
 	//  Decreases fov
 	else if (keys[SDLK_1])
 	{
@@ -890,30 +826,26 @@ int key()
 	{
 		dim += 5.0;
 	}
-	//  Decrease spotlight cuttoff angle
-	else if (keys[SDLK_5] && sco > 5.0) 
+	//  Default viewing angle
+	else if (keys[SDLK_5])
 	{
-		sco = sco == 80 ? 90 : sco-5;
+		th = 190;           
+		ph = 5;
+		Ox = -350;	   
+		Oy = 20;	     
+		Oz = 2000;
 	}
-	//  Increase spotlight cuttoff angle
-	else if (keys[SDLK_6] && sco < 180.0) 
+	//  No sky viewing angle
+	else if (keys[SDLK_6])
 	{
-		sco = sco < 90 ? sco+5 : 180;
-
-	}
-	//  Decrease spotlight exponent
-	else if (keys[SDLK_7]) 
-	{
-		Exp -= 0.1;
-		if (Exp < 0) Exp = 0;
-	}
-	//  Increase spotlight exponent
-	else if (keys[SDLK_8]) 
-	{
-		Exp += 0.1;
+		th = 10;           
+		ph = 5;
+		Ox = 350;	   
+		Oy = 20;	     
+		Oz = -2250;
 	}
 	//  Previous song
-	else if (keys[SDLK_9]) 
+	else if (keys[SDLK_n]) 
 	{
 		if (track != 0)
 		{
@@ -923,9 +855,14 @@ int key()
 		{
 			track = SONGS;
 		}
+		if (play)
+		{
+			//  Play current track
+			Mix_PlayMusic(music[track],-1);
+		}
 	}
 	//  Next song
-	else if (keys[SDLK_0]) 
+	else if (keys[SDLK_m]) 
 	{
 		if (track+1 < SONGS)
 		{
@@ -935,11 +872,21 @@ int key()
 		{
 			track = 0;
 		}
+		if (play)
+		{
+			//  Play current track
+			Mix_PlayMusic(music[track],-1);
+		}
 	}
 	//  Toggle music
 	else if (keys[SDLK_SPACE]) 
 	{
 		play = 1 - play;
+		if (play)
+		{
+			//  Play current track
+			Mix_PlayMusic(music[track],-1);
+		}
 	}
 	//  Right arrow key - increase angle by 5 degrees
 	else if (keys[SDLK_RIGHT]) 
@@ -1004,7 +951,7 @@ void display()
 	glRotated(-90,1,0,0);
 
 	//  Draw sky
-	//drawSky();
+	if (skySwitch) drawSky();
 
 	//  Light switch
 	if (light)
@@ -1018,7 +965,7 @@ void display()
 		//  Light position
 		float Position[]  = {AXES*Cos(zh),yl+750,AXES*Sin(zh),1.0};
 		//  Draw light position as ball (still no lighting here)
-		ball(Position[0],Position[1],Position[2], 5, 0);
+		ball(Position[0],Position[1],Position[2], 5);
 		//  Enbale normalization 
 		glEnable(GL_NORMALIZE);
 		//  Enable lighting
@@ -1086,7 +1033,6 @@ int main(int argc, char *argv[])
 {
 	int run = 1;
 	double t0 = 0;
-	Mix_Music* music;
 	SDL_Surface* screen;
 
 	//  Initialize SDL
@@ -1097,7 +1043,7 @@ int main(int argc, char *argv[])
 	//  Set window and icon labels
 	SDL_WM_SetCaption("Steven Conflenti: CSCI 4229 Project", "Red Rocks Amphitheatre");
 	//  Set screen size
-	reshape(screen->w,screen->h);
+	reshape(screen->w,screen->h);	
 	
 	//  Load textures 
 	rock[0] = LoadTexBMP("brick.bmp");
@@ -1107,9 +1053,8 @@ int main(int argc, char *argv[])
 	rock[4] = LoadTexBMP("dj.bmp"); 
 	rock[5] = LoadTexBMP("led.bmp"); 
 
-	sky[0] = LoadTexBMP("glow.bmp");
-	sky[1] = LoadTexBMP("sky.bmp");
-	sky[2] = LoadTexBMP("bigstar.bmp");
+	sky[0] = LoadTexBMP("blue.bmp");
+	sky[1] = LoadTexBMP("star.bmp");
  
 	//  Load objects
 	left = LoadOBJ("left.obj");
@@ -1123,13 +1068,13 @@ int main(int argc, char *argv[])
 
 	//  Initialize audio
 	if (Mix_OpenAudio(44100,AUDIO_S16SYS,2,4096)) Fatal("Cannot initialize audio\n");
-	//  Load "The Wall"
-	music = Mix_LoadMUS("thewall.ogg");
-	if (!music) Fatal("Cannot load thewall.ogg\n");
-	//  Play (looping)
-	Mix_PlayMusic(music, 1);
+	for (int i = 0; i < SONGS; i++)
+	{
+		//  Load songs
+		music[i] = Mix_LoadMUS(songs[i]);
+		if (!music[i]) Fatal("Cannot load " + *songs[i]);
+	}
 
-	//  SDL event loop
 	ErrCheck("init");
 	while (run)
 	{

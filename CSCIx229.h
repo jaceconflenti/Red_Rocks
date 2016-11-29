@@ -11,12 +11,11 @@
 #include <GL/glew.h>
 #endif
 #define GL_GLEXT_PROTOTYPES
-
-#include <GL/glu.h>
-
-#include <SDL/SDL.h>
-#include <SDL/SDL_mixer.h>
-#include <SDL/SDL_ttf.h>
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
 
 #define PI 3.1415926
 #define Cos(th) cos(PI/180*(th))

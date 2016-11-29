@@ -1,5 +1,4 @@
-uniform sampler2D glow;
-uniform sampler2D color;
+uniform sampler2D blue;
 uniform sampler2D star;
 
 varying vec3 vertex;
@@ -15,10 +14,10 @@ void main()
 
     // Look up the sky color and glow colors.
 
-    vec4 Kc = texture2D(color, vec2((L.y + 1.0) / 2.0, V.y));
-    vec4 Kg = texture2D(glow,  vec2((L.y + 1.0) / 2.0, vl));
+    vec4 Kc = texture2D(blue, vec2((L.y + 1.0) / 2.0, V.y));
+    vec4 Kg = texture2D(star,  vec2((L.y + 1.0) / 2.0, V.y));
 
     // Combine the color and glow giving the pixel value.
 
-    gl_FragColor = vec4(Kc.rgb + Kg.rgb * Kg.a / 2.0, Kc.a);
+    gl_FragColor = mix(Kc, Kg, 0.5);
 }
