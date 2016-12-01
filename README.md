@@ -1,35 +1,40 @@
 # Red Rocks Amphitheatre 
 ## Steven Jace Conflenti
- 
-### Run with ./redrocks
+### CSCI 4229 Fall 16
+
+## Run with make clean; make; ./redrocks 
+
+## The best way to view the program is to let the camera cycle on it's own (every four seconds). You can also stop the automatic camera movement and view the different camera angles manually. It's also possible to navigate the scene using the arrow keys and by clicking and dragging the mouse; however, it is not recommended.
 
 ### Key bindings:
-ESC		Exit
-Spacebar Pause music
-n/m  	Previous/Next song
-s 		Toggle sky
-d 		Toggle light movement
-f 		Cycle light
-[/] 		Move light
--/+ 		Change light elevation
-1/2		Decrease/Increase fov
-3/4 		Decrease/Increase dim
-5 		Default viewing angle
-6 		Alternate viewing angle
+ * ESC		Exit
+ * Spacebar Pause music
+ * n/m  	Previous/Next song
+ * s 		Toggle sky
+ * d 		Toggle light movement
+ * f 		Cycle light
+ * [/] 		Move light
+ * -/+ 		Change light elevation
+ * `    	Toggles camera cycling
+ * 1		Viewing angle 1
+ * 2 		Viewing angle 2
+ * 3 		Viewing angle 3
+ * 4 		Viewing angle 4
+ * 5 		Viewing angle 5
+ * 6 		Viewing angle 6
+ * 7/8		Decrease/Increase fov
+ * 9/0 		Decrease/Increase dim
 
 ### Known Issues:
-* Sky - lines instead of stars, lines in day
-* Music? - I haven't spent the time yet to try and fix sound in my VM, so I'm not sure if music is working or not.
+* Skydome - lines instead of stars, lines in day
 
 ### Things I Spent Significant Time On
 * Skydome - I spent way too much time trying to create a far too complex sky.
 * Stands - I created all elements of the stands by hand. They are very detailed (curved, complex, textured, etc.)
-* Performance issues - Now the only thing that saps performance are the trees.
-* Rock formations - Created them by hand in blender.
+* Performance issues - Now the only thing that really saps performance are the trees.
+* Rock formations - Modeled them by hand in blender.
+* Hand creating other objects - Almost everything you see in the scene (besides the spotlights) I created by hand.
 * Converting to and getting things working with the right version of SDL - luckily I did this relatively early on or it really would have been painful.
 
 ### Further Improvements
-* I plan to fix the skydome. If I can't figure it out on my own I plan on coming to see you before class this week.
-* I plan to add 'lasers' to the scene that originate from the spotlights on stage and move throughout the stands.
-* If I don't run into more performance issues and if time allows I'd like to add shadows. Since I'll only have from after
-class on Friday until Tuesday to implement them I may not get to them. I also have another major project due on Tuesday.
+* I plan to fix the skydome.

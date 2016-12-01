@@ -8,40 +8,39 @@
  * f 		Cycle light
  * [/] 		Move light
  * -/+ 		Change light elevation
- * 1/2		Decrease/Increase fov
- * 3/4 		Decrease/Increase dim
- * 5 		Default viewing angle
- * 6 		Alternate viewing angle
+ * `		Toggle camera cycling
+ * 1		Viewing angle 1
+ * 2 		Viewing angle 2
+ * 3 		Viewing angle 3
+ * 4 		Viewing angle 4
+ * 5 		Viewing angle 5
+ * 6 		Viewing angle 6
+ * 7/8		Decrease/Increase fov
+ * 9/0 		Decrease/Increase dim
  */
 
 #include <SDL/SDL.h>
 #include <SDL/SDL_mixer.h>
 #include "CSCIx229.h"
 
-#define LEN 8192        //  Max length of text string 
-
-#define SONGS 2			//  Number of songs
-const char *songs[SONGS] = {"Nyboda.mp3", "The_Unborn_Dancing.mp3"};  //  Songs downloaded from freemusicarchive.org
-Mix_Music* music[SONGS];
-int play = 0;			//  Play music
-int track = 0;          //  Music track
-
 #define AXES 1500.0     //  Length of axes
+#define LEN 8192        //  Max length of text string 
+#define SONGS 5			//  Number of songs -1 (start with song 0)
+const char *songs[SONGS+1] = {"Breakthrough.mp3","Why_Not.mp3","Renegade.mp3","Transformation.mp3","Nyboda.mp3","The_Unborn_Dancing.mp3"};  
+Mix_Music* music[SONGS+1];  //  Songs legally downloaded from freemusicarchive.org
+int play = 1;			//  Play music
+int track = 0;          //  Music track
 double dim = AXES;      //  'Radius' of world
 int fov = 60;           //  Field of view 
 double asp = 1;         //  Aspect ratio
-int axes = 1;           //  Display axes
 int th = 190;           //  Azimuth of view angle
 int ph = 5;             //  Elevation of view angle
 int zh = 0;             //  Azimouth of light
-int Th = 180;			//  Azimuth of spotlight
-int Ph = 30;			//  Elevation of spotlight
-float sco = 180;        //  Spot cuttoff angle
-float Exp = 0;          //  Spot exponent
-int inf = 0;            //  Infinite distance light
+int Th,Ph,Zh,Th1,Ph1,Zh1 = 0;  //  Azimuths of spotlights
 int light = 1;          //  Lighting
 double yl = 0.0;        //  Elevation of light
 int move = 1;           //  Move light
+int cycle = 1;          //  Cycle camera angles
 double Ex = 1;          //  X-coordinate of eye
 double Ey = 1;          //  Y-coordinate of eye
 double Ez = 1;          //  Z-coordinate of eye
@@ -50,10 +49,10 @@ double Oy = 20;	        //  Look-at y
 double Oz = 2000;	    //  Look-at z
 int X,Y;                //  Last mouse coordinates
 int mouse = 0;          //  Move mode    
-unsigned int rock[6];   //  Rock/surface textures
+unsigned int material[7];  //  Rock/surface textures
 unsigned int sky[2];    //  Sky textures
 int shader = 0;         //  Shader program
-int left, right, tree, dome, spotlight;  //  Belnder object display lists
+int left,right,tree,dome,spotlight;  //  Belnder object display lists
 int skySwitch = 1;      //  Sky switch
 
 //  Base plane for scene
@@ -65,7 +64,7 @@ static void drawGround(double x, double y, double z, double th)
 
 	glRotated(th,1,0,0);
 
-	double vert = AXES * 2;
+	double vert = AXES * 1.5;
 
 	glBegin(GL_QUADS);
 	glColor3f(1,0.5,0.35);
@@ -93,7 +92,7 @@ static void drawRock(const int mode, double x, double y, double z, double dx, do
 	glScaled(dx,dy,dz);
 
 	glColor3f(1,0.5,0.35);  
-	//glBindTexture(GL_TEXTURE_2D, rock[6]);  //  Stone
+	//glBindTexture(GL_TEXTURE_2D, material[6]);  //  Stone
 
 	if (mode == 1)
 	{
@@ -141,6 +140,113 @@ static void drawDome(double x, double y, double z, double dx, double dy, double 
 	glPopMatrix();
 }
 
+static void cylinder(const int mode, const int _stacks, double x, double y, double z, double r, double h)
+{
+	const double d = 10.0;  //  Degress per step
+	const double stacks = _stacks;
+	const double slices = 360.0 / d;
+	const double zStep = h / stacks;
+
+	int i, j;
+	double z0, z1;
+
+	//  Save transformation
+	glPushMatrix();
+
+	//  Offset
+	glTranslated(x,y,z);
+
+	
+	if (mode == 1) 
+	{
+		glColor3d(1,0,0);							//  Red
+		glBindTexture(GL_TEXTURE_2D, material[6]);  //  Laser
+	}
+	else if (mode == 2) 
+	{
+		glColor3d(0,1,0);							//  Green					
+		glBindTexture(GL_TEXTURE_2D, material[6]);  //  Laser
+	}
+	else if (mode == 3) 
+	{
+		glColor3d(0,0,1);							//  Blue
+		glBindTexture(GL_TEXTURE_2D, material[6]);  //  Laser
+	}
+	else if (mode == 4) 
+	{
+		glColor3d(1,1,0);							//  Yellow
+		glBindTexture(GL_TEXTURE_2D, material[6]);  //  Laser
+	}
+	else if (mode == 5) 
+	{
+		glColor3d(1,0,1);							//  Violet
+		glBindTexture(GL_TEXTURE_2D, material[6]);  //  Laser
+	}
+	else if (mode == 6) 
+	{
+		glColor3d(0,1,1);							//  Cyan
+		glBindTexture(GL_TEXTURE_2D, material[6]);  //  Laser
+	}
+	else 
+	{
+		glColor3d(1,0,0);  							//  Red
+		glBindTexture(GL_TEXTURE_2D, material[2]);  //  Metal
+	}
+
+	//  Construct top cricle
+	glNormal3d(0,0,1);
+	glBegin(GL_TRIANGLE_FAN);
+	glTexCoord2f(0.5, 0.5);
+	glVertex3d(0,0,h);  //  Center point of circle
+	for (i=slices; i>=0; i--)
+	{
+		glTexCoord2f(0.5 * Cos(i*d) + 0.5, 0.5 * Sin(i*d) + 0.5);
+		glVertex3d(r * Cos(i*d), r * Sin(i*d), h);
+	}
+	glEnd();
+	
+	//  Edge
+	z0 = 0.0;
+	z1 = zStep;
+
+	for (i = 1; i <= stacks; i++)
+	{
+		if (i == stacks)
+		{
+			z1 = h;
+		}
+
+		glBegin(GL_QUAD_STRIP);
+		for (j=0; j<=slices; j++)
+		{
+			double u = (double) j / (double) slices;
+			glNormal3d(Cos(j*d), Sin(j*d), 0);
+			glTexCoord2f(u, 0.0); glVertex3d(r * cos(2*PI*u), r * sin(2*PI*u), z0);
+			glTexCoord2f(u, 1.0); glVertex3d(r * cos(2*PI*u), r * sin(2*PI*u), z1);
+
+		}
+		glEnd();
+
+		z0 = z1;
+		z1 += zStep;
+	}
+
+	//  Construct bottom circle
+	glNormal3d(0,0,-1);
+	glBegin(GL_TRIANGLE_FAN);
+	glTexCoord2f(0.5, 0.5);
+	glVertex3d(0,0,0);  //  Center point of circle
+	for (i=0; i<=slices; i++)
+	{
+		glTexCoord2f(0.5 * Cos(i*d) + 0.5, 0.5 * Sin(i*d) + 0.5);
+		glVertex3d(r * Cos(i*d), r * Sin(i*d), 0);
+	}
+	glEnd();
+
+	//  Undo transformations
+	glPopMatrix();
+}
+
 //  Curved rectangular prism 
 //  mode: 1 = wood, else = brick
 static void row(const int mode, double x, double y, double z, double dx, double dy, double dz, double th)
@@ -158,12 +264,12 @@ static void row(const int mode, double x, double y, double z, double dx, double 
 	if (mode == 1)
 	{
 		glColor3f(0.7,0.55,0.43);  //  Light taupe
-		glBindTexture(GL_TEXTURE_2D, rock[3]);  //  Wood
+		glBindTexture(GL_TEXTURE_2D, material[3]);  //  Wood
 	}
 	else
 	{
 		glColor3f(1.0,0.86,0.73);  //  Peach
-		glBindTexture(GL_TEXTURE_2D, rock[0]);  //  Brick
+		glBindTexture(GL_TEXTURE_2D, material[0]);  //  Brick
 	}
 	
 	//  Front
@@ -214,11 +320,11 @@ static void row(const int mode, double x, double y, double z, double dx, double 
 
 	if (mode == 1)
 	{
-		glBindTexture(GL_TEXTURE_2D, rock[3]);  //  Wood
+		glBindTexture(GL_TEXTURE_2D, material[3]);  //  Wood
 	}
 	else 
 	{
-		glBindTexture(GL_TEXTURE_2D, rock[1]);  //  Concrete   
+		glBindTexture(GL_TEXTURE_2D, material[1]);  //  Concrete   
 	}  
 
 	//  Top
@@ -267,7 +373,7 @@ static void stands(const int num, double x, double y, double z, double dx, doubl
 
 //  Credit for spotlight blender model goes to Atzibala 
 //  http://www.blendswap.com/blends/view/75624
-static void drawSpotlight(const int lightNum, double x, double y, double z, double dx, double dy, double dz, double r, double g, double b)
+static void drawSpotlight(double x, double y, double z, double dx, double dy, double dz)
 {
 	//  Save transformations
 	glPushMatrix();
@@ -275,8 +381,24 @@ static void drawSpotlight(const int lightNum, double x, double y, double z, doub
 	glTranslated(x,y,z);
 	glScaled(dx,dy,dz);
 
-	//glCallList(spotlight);
-	ErrCheck("after spotlight");
+	glColor3f(0.31,0.33,0.35);
+	glCallList(spotlight);
+
+	//  Undo transformations
+	glPopMatrix();
+}
+
+//  color: 1 = red, 2 = green, 3 = blue, 4 = yellow, 5 = violet, 6 = cyan
+static void drawLaser(const int color, double x, double y, double z, double r, double h, double _th, double _ph)
+{
+	//  Save transformations
+	glPushMatrix();
+	//  Offset
+	glTranslated(x,y,z);
+	glRotated(_th,1,0,0);
+	glRotated(_ph,0,1,0);
+
+	cylinder(color, 1, 0,0,0, r,h);
 
 	//  Undo transformations
 	glPopMatrix();
@@ -294,21 +416,21 @@ static void cube(const int mode, double x, double y, double z, double dx, double
 	if (mode == 2)
 	{
 		glColor3f(1.0,0.0,0.0);
-		glBindTexture(GL_TEXTURE_2D, rock[2]);  //  Metal
+		glBindTexture(GL_TEXTURE_2D, material[2]);  //  Metal
 	}
 	else if (mode == 3)
 	{
 		glColor3f(0.73,0.73,0.73);
-		glBindTexture(GL_TEXTURE_2D, rock[1]);
+		glBindTexture(GL_TEXTURE_2D, material[1]);
 	}
 	else if (mode == 4)
 	{
-		glBindTexture(GL_TEXTURE_2D, rock[4]);  //  DJ
+		glBindTexture(GL_TEXTURE_2D, material[4]);  //  DJ
 	}
 	else 
 	{
 		glColor3f(1.0,0.99,0.73);
-		glBindTexture(GL_TEXTURE_2D, rock[1]);  //  Concrete
+		glBindTexture(GL_TEXTURE_2D, material[1]);  //  Concrete
 	}
 
 	//  Top
@@ -330,11 +452,11 @@ static void cube(const int mode, double x, double y, double z, double dx, double
 
 	if (mode == 1) 
 	{
-		glBindTexture(GL_TEXTURE_2D, rock[0]);  //  Brick 
+		glBindTexture(GL_TEXTURE_2D, material[0]);  //  Brick 
 	}
 	else if (mode == 4)
 	{
-		glBindTexture(GL_TEXTURE_2D, rock[5]); //  LED
+		glBindTexture(GL_TEXTURE_2D, material[5]); //  LED
 	}
 
 	//  Right
@@ -429,80 +551,6 @@ static void pathEdge(int num, double x, double y, double z, double dx, double dy
 	glPopMatrix();
 }
 
-static void cylinder(const int _stacks, double x, double y, double z, double r, double h, double th)
-{
-	const double d = 10.0;  //  Degress per step
-	const double stacks = _stacks;
-	const double slices = 360.0 / d;
-	const double zStep = h / stacks;
-
-	int i, j;
-	double z0, z1;
-
-	//  Save transformation
-	glPushMatrix();
-
-	//  Offset
-	glTranslated(x,y,z);
-	glRotated(th,1,0,0);
-
-	glColor3d(1,0,0);  //  Red
-	glBindTexture(GL_TEXTURE_2D, rock[2]);  //  Metal
-
-	//  Construct top cricle
-	glNormal3d(0,0,1);
-	glBegin(GL_TRIANGLE_FAN);
-	glTexCoord2f(0.5, 0.5);
-	glVertex3d(0,0,h);  //  Center point of circle
-	for (i=slices; i>=0; i--)
-	{
-		glTexCoord2f(0.5 * Cos(i*d) + 0.5, 0.5 * Sin(i*d) + 0.5);
-		glVertex3d(r * Cos(i*d), r * Sin(i*d), h);
-	}
-	glEnd();
-	
-	//  Edge
-	z0 = 0.0;
-	z1 = zStep;
-
-	for (i = 1; i <= stacks; i++)
-	{
-		if (i == stacks)
-		{
-			z1 = h;
-		}
-
-		glBegin(GL_QUAD_STRIP);
-		for (j=0; j<=slices; j++)
-		{
-			double u = (double) j / (double) slices;
-			glNormal3d(Cos(j*d), Sin(j*d), 0);
-			glTexCoord2f(u, 0.0); glVertex3d(r * cos(2*PI*u), r * sin(2*PI*u), z0);
-			glTexCoord2f(u, 1.0); glVertex3d(r * cos(2*PI*u), r * sin(2*PI*u), z1);
-
-		}
-		glEnd();
-
-		z0 = z1;
-		z1 += zStep;
-	}
-
-	//  Construct bottom circle
-	glNormal3d(0,0,-1);
-	glBegin(GL_TRIANGLE_FAN);
-	glTexCoord2f(0.5, 0.5);
-	glVertex3d(0,0,0);  //  Center point of circle
-	for (i=0; i<=slices; i++)
-	{
-		glTexCoord2f(0.5 * Cos(i*d) + 0.5, 0.5 * Sin(i*d) + 0.5);
-		glVertex3d(r * Cos(i*d), r * Sin(i*d), 0);
-	}
-	glEnd();
-
-	//  Undo transformations
-	glPopMatrix();
-}
-
 static void stage(double x, double y, double z, double dx, double dy, double dz, double th)
 {
 	//  Save transformations
@@ -513,13 +561,22 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 	glScaled(dx,dy,dz);
 
 	//  Spotlights
-	drawSpotlight(1, -120,-50,45, 5,5,5, 0.0,0.0,1.0);
-	drawSpotlight(2, -80,-50,50, 5,5,5, 0.0,0.0,1.0);
-	drawSpotlight(3, -40,-50,50, 5,5,5, 0.0,0.0,1.0);
-	drawSpotlight(4, 0,-50,50, 5,5,5, 0.0,0.0,1.0);
-	drawSpotlight(5, 40,-50,50, 5,5,5, 0.0,0.0,1.0);
-	drawSpotlight(6, 80,-50,50, 5,5,5, 0.0,0.0,1.0);
-	drawSpotlight(7, 120,-50,45, 5,5,5, 0.0,0.0,1.0);
+	drawSpotlight(-120,-25,45, 5,5,5); 
+	drawSpotlight(-80,-25,50, 5,5,5);
+	drawSpotlight(-40,-25,50, 5,5,5);
+	drawSpotlight(0,-25,50, 5,5,5);
+	drawSpotlight(40,-25,50, 5,5,5);
+	drawSpotlight(80,-25,50, 5,5,5);
+	drawSpotlight(120,-25,45, 5,5,5);
+
+	//  Lasers
+	drawLaser(2, -120,-15,43.5, 1.0,1000, Zh1,Th+90); drawLaser(3, -120,-42,43.5, 1.0,1000, Ph,Ph1+90); 
+	drawLaser(4, -80,-15,48.5, 1.0,1000, Th1,Th1+90); drawLaser(5, -80,-42,48.5, 1.0,1000, Zh1,Th1+90);
+	drawLaser(6, -40,-15,48.5, 1.0,1000, Ph,Ph+90); drawLaser(1, -40,-42,48.5, 1.0,1000, Zh1,Zh1+90); 
+	drawLaser(5, 0,-15,48.5, 1.0,1000, Th1,Ph1+90); drawLaser(6, 0,-42,48.5, 1.0,1000, Ph,Th1+90);
+	drawLaser(5, 40,-15,48.5, 1.0,1000, Ph1,Ph1+90); drawLaser(2, 40,-42,48.5, 1.0,1000, Zh1,Zh1+90); 
+	drawLaser(6, 80,-15,48.5, 1.0,1000, Th1,Th1+90); drawLaser(4, 80,-42,48.5, 1.0,1000, Zh,Ph+90); 
+	drawLaser(1, 120,-15,43.5, 1.0,1000, Ph1,Th+90); drawLaser(3, 120,-42,43.5, 1.0,1000, Zh,Th+90);
 
 	//  Main stage floor
 	for (int i = 0; i < 25; i++)
@@ -536,12 +593,12 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 	cube(4, 0,-60,7, 25,12.5,8); 
 
 	//  Right sub-stage 
-	cylinder(12, 140,-55,0, 2,60, 0);
-	cylinder(12, 140,-85,0, 2,60, 0);
-	cylinder(12, 110,-55,0, 2,60, 0);
-	cylinder(12, 110,-85,0, 2,60, 0);
-	cylinder(12, 110,-145,0, 2,60, 0);
-	cylinder(12, 110,-200,0, 2,60, 0);
+	cylinder(0, 12, 140,-55,0, 2,60);
+	cylinder(0, 12, 140,-85,0, 2,60);
+	cylinder(0, 12, 110,-55,0, 2,60);
+	cylinder(0, 12, 110,-85,0, 2,60);
+	cylinder(0, 12, 110,-145,0, 2,60);
+	cylinder(0, 12, 110,-200,0, 2,60);
 	
 	//  Right sub-stage roof
 	for (int i = 0; i < 9; i++)
@@ -555,12 +612,12 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 	}
 
 	//  Left sub-stage
-	cylinder(12, -140,-55,0, 2,60, 0);
-	cylinder(12, -140,-85,0, 2,60, 0);
-	cylinder(12, -110,-55,0, 2,60, 0);
-	cylinder(12, -110,-85,0, 2,60, 0);
-	cylinder(12, -110,-145,0, 2,60, 0);
-	cylinder(12, -110,-200,0, 2,60, 0);
+	cylinder(0, 12, -140,-55,0, 2,60);
+	cylinder(0, 12, -140,-85,0, 2,60);
+	cylinder(0, 12, -110,-55,0, 2,60);
+	cylinder(0, 12, -110,-85,0, 2,60);
+	cylinder(0, 12, -110,-145,0, 2,60);
+	cylinder(0, 12, -110,-200,0, 2,60);
 
 	//  Left sub-stage roof
 	for (int i = 0; i < 9; i++)
@@ -758,7 +815,7 @@ int CreateShaderProg(char* VertFile,char* FragFile)
    return prog;
 }
 
-int key()
+int key(const int num)
 {
 	Uint8* keys = SDL_GetKeyState(NULL);
 	int shift = SDL_GetModState()&KMOD_SHIFT;
@@ -806,28 +863,13 @@ int key()
 	{
 		yl += 5.0; 
 	}
-	//  Decreases fov
-	else if (keys[SDLK_1])
+	//  Toggles camera cycling
+	else if (keys[SDLK_BACKQUOTE])
 	{
-		fov--;
+		cycle = 1 - cycle;
 	}
-	//  Increase fov
-	else if (keys[SDLK_2])
-	{
-		fov++;
-	}
-	//  Decrease dim
-	else if (keys[SDLK_3]) 
-	{
-		dim -= 5.0;
-	}
-	//  Increase dim
-	else if (keys[SDLK_4]) 
-	{
-		dim += 5.0;
-	}
-	//  Default viewing angle
-	else if (keys[SDLK_5])
+	//  Viewing angle 1
+	else if (keys[SDLK_1] || num == 1)
 	{
 		th = 190;           
 		ph = 5;
@@ -835,14 +877,70 @@ int key()
 		Oy = 20;	     
 		Oz = 2000;
 	}
-	//  No sky viewing angle
-	else if (keys[SDLK_6])
+	//  Viewing angle 2
+	else if (keys[SDLK_2] || num == 2)
 	{
-		th = 10;           
+		th = -5;           
+		ph = 5;
+		Ox = 0;	   
+		Oy = 0;	     
+		Oz = -2500;
+	}
+	//  Viewing angle 3
+	else if (keys[SDLK_3] || num == 3)
+	{
+	 	th = 180;           
+		ph = 20;
+		Ox = 150;	   
+		Oy = 0;	     
+		Oz = 925;
+	}
+	//  Viewing angle 4
+	else if (keys[SDLK_4] || num == 4)
+	{
+		th = 15;           
 		ph = 5;
 		Ox = 350;	   
 		Oy = 20;	     
 		Oz = -2250;
+	}
+	//  Viewing angle 5
+	else if (keys[SDLK_5] || num == 5)
+	{
+		th = -165;           
+		ph = 15;
+		Ox = 0;	   
+		Oy = 0;	     
+		Oz = 1250;	
+	}
+	//  Viewing angle 6
+	else if (keys[SDLK_6] || num == 6)
+	{
+		th = 180;           
+		ph = 10;
+		Ox = -100;	   
+		Oy = -200;	     
+		Oz = 2500;
+	}
+	//  Decreases fov
+	else if (keys[SDLK_7])
+	{
+		fov--;
+	}
+	//  Increase fov
+	else if (keys[SDLK_8])
+	{
+		fov++;
+	}
+	//  Decrease dim
+	else if (keys[SDLK_9]) 
+	{
+		dim -= 5.0;
+	}
+	//  Increase dim
+	else if (keys[SDLK_0]) 
+	{
+		dim += 5.0;
 	}
 	//  Previous song
 	else if (keys[SDLK_n]) 
@@ -886,6 +984,10 @@ int key()
 		{
 			//  Play current track
 			Mix_PlayMusic(music[track],-1);
+		}
+		else
+		{
+			Mix_HaltMusic();
 		}
 	}
 	//  Right arrow key - increase angle by 5 degrees
@@ -1001,26 +1103,6 @@ void display()
 	glDisable(GL_LIGHTING);
 	glDisable(GL_TEXTURE_2D);
 
-	glColor3f(1,1,1);
-	if (axes)
-	{
-		glBegin(GL_LINES);
-		glVertex3d(Ox,Oy,Oz);
-		glVertex3d(AXES,Oy,Oz);
-		glVertex3d(Ox,Oy,Oz);
-		glVertex3d(Ox,AXES,Oz);
-		glVertex3d(Ox,Oy,Oz);
-		glVertex3d(Ox,Oy,AXES);
-		glEnd();
-		//  Label axes
-		glRasterPos3d(AXES,0.0,0.0);
-		Print("X");
-		glRasterPos3d(0.0,AXES,0.0);
-		Print("Y");
-		glRasterPos3d(0.0,0.0,AXES);
-		Print("Z");
-	}
-
 	glPopMatrix();
 
 	//  Render the scene and make it visible
@@ -1031,8 +1113,10 @@ void display()
 
 int main(int argc, char *argv[])
 {
-	int run = 1;
-	double t0 = 0;
+	int run = 1; 
+	int cameraAngle = 1;
+	double t0 = 0; 
+	double time0 = 0;
 	SDL_Surface* screen;
 
 	//  Initialize SDL
@@ -1046,12 +1130,13 @@ int main(int argc, char *argv[])
 	reshape(screen->w,screen->h);	
 	
 	//  Load textures 
-	rock[0] = LoadTexBMP("brick.bmp");
-	rock[1] = LoadTexBMP("concrete.bmp");
-	rock[2] = LoadTexBMP("metal.bmp");
-	rock[3] = LoadTexBMP("wood.bmp"); 
-	rock[4] = LoadTexBMP("dj.bmp"); 
-	rock[5] = LoadTexBMP("led.bmp"); 
+	material[0] = LoadTexBMP("brick.bmp");
+	material[1] = LoadTexBMP("concrete.bmp");
+	material[2] = LoadTexBMP("metal.bmp");
+	material[3] = LoadTexBMP("wood.bmp"); 
+	material[4] = LoadTexBMP("dj.bmp"); 
+	material[5] = LoadTexBMP("led.bmp");
+	material[6] = LoadTexBMP("laser.bmp"); 
 
 	sky[0] = LoadTexBMP("blue.bmp");
 	sky[1] = LoadTexBMP("star.bmp");
@@ -1068,18 +1153,21 @@ int main(int argc, char *argv[])
 
 	//  Initialize audio
 	if (Mix_OpenAudio(44100,AUDIO_S16SYS,2,4096)) Fatal("Cannot initialize audio\n");
-	for (int i = 0; i < SONGS; i++)
+	for (int i = 0; i <= SONGS; i++)
 	{
 		//  Load songs
 		music[i] = Mix_LoadMUS(songs[i]);
 		if (!music[i]) Fatal("Cannot load " + *songs[i]);
 	}
+	//  Play current track
+	Mix_PlayMusic(music[track],-1);
 
 	ErrCheck("init");
 	while (run)
 	{
 		//  Elapsed time in seconds
 		double t = SDL_GetTicks()/1000.0;
+		double time = SDL_GetTicks()/1000.0;
 		//  Process all pending events
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) 
@@ -1094,7 +1182,7 @@ int main(int argc, char *argv[])
 					run = 0;
 					break;
 				case SDL_KEYDOWN:
-					run = key();
+					run = key(0);
 					t0 = t+0.5;  //  Wait .5s before repeating
 					break;
 				case SDL_MOUSEMOTION:
@@ -1131,14 +1219,27 @@ int main(int argc, char *argv[])
 		//  Repeat key every 50 ms
 		if (t-t0>0.05)
 		{
-			run = key();
+			run = key(0);
 			t0 = t;
+		}
+		//  Cycle camera angle every 5 seconds
+		if(time-time0>4.0 && cycle)
+		{
+			cameraAngle++;
+			cameraAngle %= 6;
+			run = key(cameraAngle);
+			time0 = time;
 		}
 		//  Display
 		if (move) 
 		{
 			zh = fmod(90*t,360.0);
 			Th = fmod(90*t,360.0);
+			Ph = fmod((90*t)+30,360.0);
+			Zh = fmod((90*t)+60,360.0);
+			Th1 = fmod(90*t,180.0);
+			Ph1 = fmod((90*t)+45,180.0);
+			Zh1 = fmod((90*t)+90,180.0);
 		}
 		display();
 		//  Slow down display rate to about 100 fps by sleeping 5ms
