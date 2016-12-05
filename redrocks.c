@@ -3,6 +3,7 @@
  * ESC		Exit
  * Spacebar Pause music
  * n/m  	Previous/Next song
+ * a        Toggle performance mode
  * s 		Toggle sky
  * d 		Toggle light movement
  * f 		Cycle light
@@ -48,12 +49,16 @@ double Ox = -350;	    //  Look-at x
 double Oy = 20;	        //  Look-at y
 double Oz = 2000;	    //  Look-at z
 int X,Y;                //  Last mouse coordinates
-int mouse = 0;          //  Move mode    
+int mouse = 0;          //  Move mode 
+int scroll = 0;         //  Mousewheel scroll   
 unsigned int material[7];  //  Rock/surface textures
-unsigned int sky[2];    //  Sky textures
+unsigned int sky[3];    //  Sky textures
 int shader = 0;         //  Shader program
 int left,right,tree,dome,spotlight;  //  Belnder object display lists
 int skySwitch = 1;      //  Sky switch
+int quality = 1;    	//  0 = Better performance mode
+float mix = 0.0;  		//  Uniform 
+float mix2 = 1.0;
 
 //  Base plane for scene
 static void drawGround(double x, double y, double z, double th)
@@ -525,7 +530,7 @@ static void pathEdge(int num, double x, double y, double z, double dx, double dy
 
 	for (int i = 0; i < num; i++)
 	{ 
-		if (((i%5) == 0) && (i != 0))
+		if (((i%5) == 0) && (i != 0) && quality)
 		{
 			drawTree(xTree,y+(i*dy*4),z+(i*dz*4)-8,dx/5,dy/5,dz*.75,th+21,0,0);			
 		}
@@ -705,16 +710,26 @@ static void drawSky()
 	glUseProgram(shader);
 
 	int id = glGetUniformLocation(shader, "blue");
-	int id2 = glGetUniformLocation(shader, "star");
+	int id1 = glGetUniformLocation(shader, "star");
+	int id2 = glGetUniformLocation(shader, "glow");
+	float id3 = glGetUniformLocation(shader, "mix");
+	float id4 = glGetUniformLocation(shader, "mix2");
 	
 	if (id >= 0) glUniform1i(id, 0);
-	if (id2 >= 0) glUniform1i(id2, 1);
+	if (id1 >= 0) glUniform1i(id1, 1);
+	if (id2 >= 0) glUniform1i(id2, 2);
+	if (id3 >= 0) glUniform1f(id3, mix);
+	if (id4 >= 0) glUniform1f(id4, mix2);
+
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, sky[0]);
 
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, sky[1]);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, sky[2]);
 
 	drawDome(0,750,-50, 1500,1500,1500, 90);
 
@@ -825,6 +840,11 @@ int key(const int num)
 	{
 		return 0;
 	}	
+	//  Toggles performance mode
+	else if (keys[SDLK_a])
+	{
+		quality = 1 - quality;
+	}
 	//  Toggles sky
 	else if (keys[SDLK_s])
 	{
@@ -893,7 +913,7 @@ int key(const int num)
 		ph = 20;
 		Ox = 150;	   
 		Oy = 0;	     
-		Oz = 925;
+		Oz = 975;
 	}
 	//  Viewing angle 4
 	else if (keys[SDLK_4] || num == 4)
@@ -999,16 +1019,19 @@ int key(const int num)
 	else if (keys[SDLK_LEFT]) 
 	{
 		th -= 5;
+
 	}
 	//  Up arrow key - increase elevation by 5 degrees
 	else if (keys[SDLK_UP]) 
 	{
 		ph += 5;
+		if (ph > 20) ph = 20;
 	}
 	//  Down arrow key - decrease elevation by 5 degrees
 	else if (keys[SDLK_DOWN]) 
 	{
 		ph -= 5;
+		if (ph < 5) ph = 5;
 	}
 
 	//  Keep angles to +/-360 degrees
@@ -1115,8 +1138,8 @@ int main(int argc, char *argv[])
 {
 	int run = 1; 
 	int cameraAngle = 1;
-	double t0 = 0; 
 	double time0 = 0;
+	double tKey0 = 0;
 	SDL_Surface* screen;
 
 	//  Initialize SDL
@@ -1140,6 +1163,7 @@ int main(int argc, char *argv[])
 
 	sky[0] = LoadTexBMP("blue.bmp");
 	sky[1] = LoadTexBMP("star.bmp");
+	sky[2] = LoadTexBMP("glow.bmp");
  
 	//  Load objects
 	left = LoadOBJ("left.obj");
@@ -1166,8 +1190,9 @@ int main(int argc, char *argv[])
 	while (run)
 	{
 		//  Elapsed time in seconds
-		double t = SDL_GetTicks()/1000.0;
+		double tSlow = SDL_GetTicks()/1000.0;
 		double time = SDL_GetTicks()/1000.0;
+		double tKey = SDL_GetTicks()/1000.0;
 		//  Process all pending events
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) 
@@ -1183,7 +1208,7 @@ int main(int argc, char *argv[])
 					break;
 				case SDL_KEYDOWN:
 					run = key(0);
-					t0 = t+0.5;  //  Wait .5s before repeating
+					tKey0 = tKey+0.5;  //  Wait .5s before repeating
 					break;
 				case SDL_MOUSEMOTION:
 					if (mouse)
@@ -1217,10 +1242,10 @@ int main(int argc, char *argv[])
 			}
 		}
 		//  Repeat key every 50 ms
-		if (t-t0>0.05)
+		if (tKey-tKey0>0.05)
 		{
 			run = key(0);
-			t0 = t;
+			tKey0 = tKey;
 		}
 		//  Cycle camera angle every 5 seconds
 		if(time-time0>4.0 && cycle)
@@ -1233,13 +1258,17 @@ int main(int argc, char *argv[])
 		//  Display
 		if (move) 
 		{
-			zh = fmod(90*t,360.0);
-			Th = fmod(90*t,360.0);
-			Ph = fmod((90*t)+30,360.0);
-			Zh = fmod((90*t)+60,360.0);
-			Th1 = fmod(90*t,180.0);
-			Ph1 = fmod((90*t)+45,180.0);
-			Zh1 = fmod((90*t)+90,180.0);
+			zh = fmod(90*tSlow,360.0);
+			mix = (float) zh / 360.0;
+			mix2 = 1.0 - mix;
+			if (mix2 > 0.5) mix = 0.01;
+			if (mix < 0.5) mix = 0.01;
+			Th = fmod((90*time),360.0);
+			Ph = fmod((90*time)+30,360.0);
+			Zh = fmod((90*time)+60,360.0);
+			Th1 = fmod((90*time),180.0);
+			Ph1 = fmod((90*time)+45,180.0);
+			Zh1 = fmod((90*time)+90,180.0);
 		}
 		display();
 		//  Slow down display rate to about 100 fps by sleeping 5ms
