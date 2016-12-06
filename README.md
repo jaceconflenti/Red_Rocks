@@ -13,7 +13,7 @@
  * a        Toggle performance mode
  * s 		Toggle sky
  * d 		Toggle light movement
- * f 		Cycle light
+ * f 		Cycle light intensity
  * [/] 		Move light
  * -/+ 		Change light elevation
  * `    	Toggles automatic camera cycling
@@ -26,10 +26,10 @@
  * 7/8		Decrease/Increase fov
  * 9/0 		Decrease/Increase dim
 
-### Things I Spent Significant Time On
+### Things I Spent Lots of Time On
 * Skydome - I spent way too much time trying to create a far too complex sky. Eventually I simplified it, but even the simplified version took me a long time to figure out.
 * Stands - I created all elements of the stands by hand. They are very detailed (curved, complex, textured, etc.)
-* Performance issues - Now the only thing that really saps performance are the trees.
 * Rock formations - Modeled them by hand in blender.
-* Hand creating other objects - Almost everything you see in the scene (besides the spotlights) I created by hand.
+* Performance issues - Now the only thing that really saps performance are the trees (also have performance mode).
+* Hand creating other objects - Almost everything you see in the scene (besides the spotlights and trees) I created by hand.
 * Converting to and getting things working with the right version of SDL - luckily I did this relatively early on or it really would have been painful.

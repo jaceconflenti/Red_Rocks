@@ -31,7 +31,7 @@ const char *songs[SONGS+1] = {"Breakthrough.mp3","Why_Not.mp3","Renegade.mp3","T
 Mix_Music* music[SONGS+1];  //  Songs legally downloaded from freemusicarchive.org
 int play = 1;			//  Play music
 int track = 0;          //  Music track
-double dim = AXES;      //  'Radius' of world
+double dim = AXES;      //  Size of world
 int fov = 60;           //  Field of view 
 double asp = 1;         //  Aspect ratio
 int th = 190;           //  Azimuth of view angle
@@ -49,16 +49,15 @@ double Ox = -350;	    //  Look-at x
 double Oy = 20;	        //  Look-at y
 double Oz = 2000;	    //  Look-at z
 int X,Y;                //  Last mouse coordinates
-int mouse = 0;          //  Move mode 
-int scroll = 0;         //  Mousewheel scroll   
+int mouse = 0;          //  Move mode   
 unsigned int material[7];  //  Rock/surface textures
-unsigned int sky[3];    //  Sky textures
+unsigned int sky[4];    //  Sky textures
 int shader = 0;         //  Shader program
-int left,right,tree,dome,spotlight;  //  Belnder object display lists
 int skySwitch = 1;      //  Sky switch
 int quality = 1;    	//  0 = Better performance mode
-float mix = 0.0;  		//  Uniform 
-float mix2 = 1.0;
+float mix1 = 0.0;  		//  Uniform ratio of day sky : night sky
+float amb = 1.25;       //  Influences ambient light
+int left,right,tree,dome,spotlight;  //  Belnder object display lists
 
 //  Base plane for scene
 static void drawGround(double x, double y, double z, double th)
@@ -129,7 +128,7 @@ static void drawTree(double x, double y, double z, double dx, double dy, double 
 	glPopMatrix();
 }
 
-//  Draws a geodesic dome
+//  Geodesic dome
 static void drawDome(double x, double y, double z, double dx, double dy, double dz, double th)
 {
 	//  Save transformations
@@ -403,7 +402,7 @@ static void drawLaser(const int color, double x, double y, double z, double r, d
 	glRotated(_th,1,0,0);
 	glRotated(_ph,0,1,0);
 
-	cylinder(color, 1, 0,0,0, r,h);
+	cylinder(color, (quality) ? r:10, 0,0,0, r,h);
 
 	//  Undo transformations
 	glPopMatrix();
@@ -575,13 +574,13 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 	drawSpotlight(120,-25,45, 5,5,5);
 
 	//  Lasers
-	drawLaser(2, -120,-15,43.5, 1.0,1000, Zh1,Th+90); drawLaser(3, -120,-42,43.5, 1.0,1000, Ph,Ph1+90); 
-	drawLaser(4, -80,-15,48.5, 1.0,1000, Th1,Th1+90); drawLaser(5, -80,-42,48.5, 1.0,1000, Zh1,Th1+90);
-	drawLaser(6, -40,-15,48.5, 1.0,1000, Ph,Ph+90); drawLaser(1, -40,-42,48.5, 1.0,1000, Zh1,Zh1+90); 
-	drawLaser(5, 0,-15,48.5, 1.0,1000, Th1,Ph1+90); drawLaser(6, 0,-42,48.5, 1.0,1000, Ph,Th1+90);
-	drawLaser(5, 40,-15,48.5, 1.0,1000, Ph1,Ph1+90); drawLaser(2, 40,-42,48.5, 1.0,1000, Zh1,Zh1+90); 
-	drawLaser(6, 80,-15,48.5, 1.0,1000, Th1,Th1+90); drawLaser(4, 80,-42,48.5, 1.0,1000, Zh,Ph+90); 
-	drawLaser(1, 120,-15,43.5, 1.0,1000, Ph1,Th+90); drawLaser(3, 120,-42,43.5, 1.0,1000, Zh,Th+90);
+	drawLaser(2, -120,-15,43.5, 1.5,2000, Zh1,Th+90); drawLaser(3, -120,-42,43.5, 1.5,2000, Ph,Ph1+90); 
+	drawLaser(4, -80,-15,48.5, 1.5,2000, Th1,Th1+90); drawLaser(5, -80,-42,48.5, 1.5,2000, Zh1,Th1+90);
+	drawLaser(6, -40,-15,48.5, 1.5,2000, Ph,Ph+90); drawLaser(1, -40,-42,48.5, 1.5,2000, Zh1,Zh1+90); 
+	drawLaser(5, 0,-15,48.5, 1.5,2000, Th1,Ph1+90); drawLaser(6, 0,-42,48.5, 1.5,2000, Ph,Th1+90);
+	drawLaser(5, 40,-15,48.5, 1.5,2000, Ph1,Ph1+90); drawLaser(2, 40,-42,48.5, 1.5,2000, Zh1,Zh1+90); 
+	drawLaser(6, 80,-15,48.5, 1.5,2000, Th1,Th1+90); drawLaser(4, 80,-42,48.5, 1.5,2000, Zh,Ph+90); 
+	drawLaser(1, 120,-15,43.5, 1.5,2000, Ph1,Th+90); drawLaser(3, 120,-42,43.5, 1.5,2000, Zh,Th+90);
 
 	//  Main stage floor
 	for (int i = 0; i < 25; i++)
@@ -650,41 +649,18 @@ static void stage(double x, double y, double z, double dx, double dy, double dz,
 	glPopMatrix();
 }
 
-//  Adapted from example 18 code
-static void Vertex(int th,int ph)
+static void sun(double x,double y,double z,double r)
 {
-	double x = -Sin(th)*Cos(ph);
-	double y =  Cos(th)*Cos(ph);
-	double z =          Sin(ph);
-	glNormal3d(x,y,z);
-	glVertex3d(x,y,z);
-}
-
-//  Adapted from example 13 code
-static void ball(double x,double y,double z,double r)
-{
-	int th,ph;
-	int inc = 10;
-
 	//  Save transformation
 	glPushMatrix();
 	//  Offset, scale 
 	glTranslated(x,y,z);
-	glScaled(r,r,r);
 
-	glColor3f(1.0,1.0,0.0);
-
-	//  Bands of latitude
-	for (ph=-90;ph<90;ph+=inc)
-	{
-		glBegin(GL_QUAD_STRIP);
-		for (th=0;th<=360;th+=2*inc)
-		{
-			Vertex(th,ph);
-			Vertex(th,ph+inc);
-		}
-		glEnd();
-	}
+	GLUquadric *qobj = gluNewQuadric(); 
+	gluQuadricTexture(qobj,GL_TRUE);
+	glBindTexture(GL_TEXTURE_2D,sky[3]);
+	gluSphere(qobj,r,25,25);
+	gluDeleteQuadric(qobj); 
 
 	//  Undo transofrmations
 	glPopMatrix();
@@ -711,16 +687,13 @@ static void drawSky()
 
 	int id = glGetUniformLocation(shader, "blue");
 	int id1 = glGetUniformLocation(shader, "star");
-	int id2 = glGetUniformLocation(shader, "glow");
-	float id3 = glGetUniformLocation(shader, "mix");
-	float id4 = glGetUniformLocation(shader, "mix2");
+	int id2 = glGetUniformLocation(shader, "cloud");
+	float id3 = glGetUniformLocation(shader, "mix1");
 	
 	if (id >= 0) glUniform1i(id, 0);
 	if (id1 >= 0) glUniform1i(id1, 1);
 	if (id2 >= 0) glUniform1i(id2, 2);
-	if (id3 >= 0) glUniform1f(id3, mix);
-	if (id4 >= 0) glUniform1f(id4, mix2);
-
+	if (id3 >= 0) glUniform1f(id3, mix1);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, sky[0]);
@@ -1083,14 +1056,14 @@ void display()
 	{
 		float F = (light==2) ? 1 : 0.3;
 		//  Translate intensity to color vectors
-		float Ambient[]   = {0.2*F,0.2*F,0.2*F,1.0};
+		float Ambient[]   = {0.2*F*amb,0.2*F*amb,0.2*F*amb,1.0};
 		float Diffuse[]   = {0.5*F,0.5*F,0.5*F,1.0};
 		float Specular[]  = {1.0*F,1.0*F,1.0*F,1.0};
 		float yellow[] = {1.0,1.0,0.85,1.0};
 		//  Light position
-		float Position[]  = {AXES*Cos(zh),yl+750,AXES*Sin(zh),1.0};
-		//  Draw light position as ball (still no lighting here)
-		ball(Position[0],Position[1],Position[2], 5);
+		float Position[]  = {0.8*AXES*Cos(zh),yl+750,0.8*AXES*Sin(zh),1.0};
+		//  Draw light position as sun (still no lighting here)
+		sun(Position[0],Position[1],Position[2], 30);
 		//  Enbale normalization 
 		glEnable(GL_NORMALIZE);
 		//  Enable lighting
@@ -1160,11 +1133,11 @@ int main(int argc, char *argv[])
 	material[4] = LoadTexBMP("dj.bmp"); 
 	material[5] = LoadTexBMP("led.bmp");
 	material[6] = LoadTexBMP("laser.bmp"); 
-
-	sky[0] = LoadTexBMP("blue.bmp");
-	sky[1] = LoadTexBMP("star.bmp");
-	sky[2] = LoadTexBMP("glow.bmp");
- 
+	sky[0] = LoadTexBMP("sky.bmp");
+	sky[1] = LoadTexBMP("bigstar.bmp");
+	sky[2] = LoadTexBMP("cloud.bmp");
+	sky[3] = LoadTexBMP("sun.bmp");
+	
 	//  Load objects
 	left = LoadOBJ("left.obj");
 	right = LoadOBJ("right.obj");
@@ -1190,7 +1163,7 @@ int main(int argc, char *argv[])
 	while (run)
 	{
 		//  Elapsed time in seconds
-		double tSlow = SDL_GetTicks()/1000.0;
+		double tSlow = SDL_GetTicks()/10000.0;
 		double time = SDL_GetTicks()/1000.0;
 		double tKey = SDL_GetTicks()/1000.0;
 		//  Process all pending events
@@ -1247,7 +1220,7 @@ int main(int argc, char *argv[])
 			run = key(0);
 			tKey0 = tKey;
 		}
-		//  Cycle camera angle every 5 seconds
+		//  Cycle camera angle every 4 seconds
 		if(time-time0>4.0 && cycle)
 		{
 			cameraAngle++;
@@ -1258,11 +1231,20 @@ int main(int argc, char *argv[])
 		//  Display
 		if (move) 
 		{
+			//  Slow the sky cycle time
 			zh = fmod(90*tSlow,360.0);
-			mix = (float) zh / 360.0;
-			mix2 = 1.0 - mix;
-			if (mix2 > 0.5) mix = 0.01;
-			if (mix < 0.5) mix = 0.01;
+			float percent = (float) zh / 360.0;
+			//  Set the mix ratio
+			if (percent < 0.5) mix1 = 0.01;
+			else mix1 = 0.95;
+			if (percent > 0.95 || percent < 0.05) mix1 = 0.5;
+			if ((percent > 0.45 && percent < 0.55)) mix1 = 0.5;
+			//  Adjust ambient light
+			amb = 1.25 - percent;
+			if (amb < 0.5) amb = 0.2;
+			if (amb > 1.0) amb = 1.0;
+
+			//  Laser angles
 			Th = fmod((90*time),360.0);
 			Ph = fmod((90*time)+30,360.0);
 			Zh = fmod((90*time)+60,360.0);
