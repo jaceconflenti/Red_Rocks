@@ -42,8 +42,8 @@
 
 #define AXES 1500.0     //  Length of axes
 #define LEN 8192        //  Max length of text string 
-#define SONGS 5			//  Number of songs -1 (start with song 0)
-const char *songs[SONGS+1] = {"Breakthrough.mp3","Why_Not.mp3","Renegade.mp3","Transformation.mp3","Nyboda.mp3","The_Unborn_Dancing.mp3"};  
+#define SONGS 4			//  Number of songs -1 (start with song 0)
+const char *songs[SONGS+1] = {"Breakthrough.mp3","Why_Not.mp3","Renegade.mp3","Transformation.mp3","Nyboda.mp3"};  
 Mix_Music* music[SONGS+1];  //  Songs legally downloaded from freemusicarchive.org
 int play = 1;			//  Play music
 int track = 0;          //  Music track
